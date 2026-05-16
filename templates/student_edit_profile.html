@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CCS | Edit Profile</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="admin-navbar">
+    <div class="admin-brand">Dashboard</div>
+    <ul class="admin-links">
+      <li><a href="/student">Home</a></li>
+      <li><a href="/student/summary">Summary</a></li>
+      <li><a href="/student/sessions">Sessions</a></li>
+      <li><a href="/student/reservation">Reservation</a></li>
+      <li><a href="/student/testimonials">Testimonials</a></li>
+      <li><a href="/student/edit_profile" class="active">Edit Profile</a></li>
+      <li><a href="/student/history">History</a></li>
+      <li><a href="/student/labs">Labs</a></li>
+      <li><a href="#" id="darkModeToggle">🌓 Dark/Light</a></li>
+      <li><a href="/logout" class="logout-btn">Log out</a></li>
+    </ul>
+  </nav>
+  <div class="dash-header">Edit Profile</div>
+  <div class="admin-body">
+    <div class="admin-card">
+      <div style="text-align:center; margin-bottom:20px;"><div id="photoPreview" style="width:100px; height:100px; border-radius:50%; background:#1a3a8f; color:white; font-size:28px; font-weight:bold; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; overflow:hidden; border:3px solid #1a3a8f;">{% if user.photo %}<img src="{{ user.photo }}" style="width:100%;height:100%;object-fit:cover;">{% else %}{{ user.firstname[0] }}{{ user.lastname[0] }}{% endif %}</div><label for="photoInput" style="cursor:pointer; background:#1a3a8f; color:white; padding:6px 14px; border-radius:6px; font-size:13px; display:inline-block;">📷 Change Photo</label><input type="file" id="photoInput" name="photo" accept="image/*" style="display:none;" onchange="previewPhoto(this)" form="editForm"></div>
+      <form id="editForm" action="/student/edit_profile" method="POST" enctype="multipart/form-data">
+        <div class="form-group"><label>First Name</label><input type="text" name="firstname" value="{{ user.firstname }}" required></div>
+        <div class="form-group"><label>Last Name</label><input type="text" name="lastname" value="{{ user.lastname }}" required></div>
+        <div class="form-group"><label>Middle Name</label><input type="text" name="middlename" value="{{ user.middlename or '' }}"></div>
+        <div class="form-group"><label>Email</label><input type="email" name="email" value="{{ user.email }}" required></div>
+        <div class="form-group"><label>Address</label><input type="text" name="address" value="{{ user.address }}" required></div>
+        <div style="display:flex; gap:10px;"><button type="submit" class="btn">Save Changes</button><a href="/student" class="btn" style="background:#aaa; text-decoration:none; text-align:center;">Cancel</a></div>
+      </form>
+    </div>
+  </div>
+  <script>
+    function previewPhoto(input) { if (input.files && input.files[0]) { var reader = new FileReader(); reader.onload = function(e) { var preview = document.getElementById('photoPreview'); preview.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">'; }; reader.readAsDataURL(input.files[0]); } }
+    function initDarkMode() { const isDark = localStorage.getItem('darkMode') === 'true'; if (isDark) document.body.classList.add('dark-mode'); const toggle = document.getElementById('darkModeToggle'); if (toggle) toggle.addEventListener('click', (e) => { e.preventDefault(); document.body.classList.toggle('dark-mode'); localStorage.setItem('darkMode', document.body.classList.contains('dark-mode')); }); }
+    initDarkMode();
+  </script>
+</body>
+</html>

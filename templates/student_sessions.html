@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CCS | My Sessions</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+</head>
+<body>
+  <nav class="admin-navbar">
+    <div class="admin-brand">College of Computer Studies</div>
+    <ul class="admin-links">
+      <li><a href="/student">Home</a></li>
+      <li><a href="/student/summary">Summary</a></li>
+      <li><a href="/student/sessions" class="active">Sessions</a></li>
+      <li><a href="/student/reservation">Reservation</a></li>
+      <li><a href="/student/testimonials">Testimonials</a></li>
+      <li><a href="/student/edit_profile">Edit Profile</a></li>
+      <li><a href="/student/history">History</a></li>
+      <li><a href="/student/labs">Labs</a></li>
+      <li><a href="#" id="darkModeToggle">🌓 Dark/Light</a></li>
+      <li><a href="/logout" class="logout-btn">Log out</a></li>
+    </ul>
+  </nav>
+  <div class="dash-header">My Session Records</div>
+  <div class="admin-body">
+    <div class="admin-card" style="max-width:100%;">
+      <div class="card-header">📋 All My Sit-in Sessions</div>
+      <div class="card-body">
+        <table class="admin-table" id="sessionsTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Time In</th>
+              <th>Time Out</th>
+              <th>Duration</th>
+              <th>Purpose</th>
+              <th>Lab</th>
+              <th>PC</th>
+              <th>PC Status</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in sitins %}
+            <tr>
+              <td>{{ s.date[:10] }}</td>
+              <td>{{ s.time_in[11:16] if s.time_in else '—' }}</td>
+              <td>{{ s.time_out[11:16] if s.time_out else '—' }}</td>
+              <td>{{ s.duration }}</td>
+              <td>{{ s.purpose }}</td>
+              <td>{{ s.lab }}</td>
+              <td>{{ s.pc_number or '—' }}</td>
+              <td>{{ s.pc_status }}</td>
+              <td>{% if s.status == 'Active' %}<span class="badge-green">Active</span>{% else %}<span class="badge-gray">Done</span>{% endif %}</td>
+            </tr>
+            {% else %}
+            <td><td colspan="9" style="text-align:center;color:#aaa;">No sessions yet</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      var table = $('#sessionsTable');
+      if (table.find('tbody tr').length > 0 && table.find('tbody tr td[colspan="9"]').length === 0) {
+        table.DataTable({
+          order: [[0, 'desc']],
+          pageLength: 10,
+          language: { emptyTable: "No sessions yet." }
+        });
+      }
+    });
+    function initDarkMode() {
+      const isDark = localStorage.getItem('darkMode') === 'true';
+      if (isDark) document.body.classList.add('dark-mode');
+      const toggle = document.getElementById('darkModeToggle');
+      if (toggle) toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+      });
+    }
+    initDarkMode();
+  </script>
+</body>
+</html>

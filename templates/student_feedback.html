@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>CCS | Feedback</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+</head>
+<body>
+  <nav class="admin-navbar">
+    <div class="admin-brand">College of Computer Studies</div>
+    <ul class="admin-links">
+      <li><a href="#" id="darkModeToggle">🌓 Dark/Light</a></li>
+      <li><a href="/student">Home</a></li>
+      <li><a href="/student/feedback" class="active">Feedback</a></li>
+      <li><a href="/student/reservation">Reservation</a></li>
+      <li><span style="color:white;padding:7px 14px;">Welcome, {{ user.firstname }}!</span></li>
+      <li><a href="/logout" class="logout-btn">Log out</a></li>
+    </ul>
+  </nav>
+
+  <div class="admin-body">
+    <div class="admin-card">
+      <div class="card-header">📝 Submit Feedback</div>
+      <div class="card-body">
+        <form action="/student/feedback" method="POST">
+          <div class="form-group">
+            <label>Your Feedback</label>
+            <textarea name="message" rows="4" placeholder="Write your feedback here..."
+              style="padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;width:100%;resize:vertical;"
+              required></textarea>
+          </div>
+          <button type="submit" class="btn">Submit Feedback</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="admin-card" style="margin-top:20px;max-width:500px;">
+      <div class="card-header">📋 My Feedback History</div>
+      <div class="card-body">
+        {% for f in feedbacks %}
+        <div class="announcement-item">
+          <p class="ann-meta">{{ f.date[:16] }}</p>
+          <p class="ann-content">{{ f.message }}</p>
+        </div>
+        {% else %}
+        <p style="color:#aaa;text-align:center;">No feedback submitted yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>

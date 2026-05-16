@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CCS | Generate Reports</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <style>
+    /* Navbar overflow fix – same as dashboard */
+    .admin-navbar {
+      flex-wrap: wrap;
+      padding: 8px 20px;
+    }
+    .admin-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+    }
+    .admin-links li a {
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+    .admin-links li:last-child {
+      margin-left: auto;
+    }
+    /* Filter form styles */
+    .filter-form {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .filter-group {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .filter-group .form-group {
+      margin-bottom: 0;
+      flex: 1;
+      min-width: 120px;
+    }
+    .btn-export {
+      background: linear-gradient(135deg, #27ae60, #1e8449);
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-export:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    .notification-item-unread {
+      background: rgba(160,180,255,0.1);
+      border-left: 3px solid #a0b4ff;
+    }
+    .notification-item-read {
+      opacity: 0.7;
+    }
+    .mark-read-btn {
+      float: right;
+      font-size: 10px;
+      padding: 2px 8px;
+      background: rgba(160,180,255,0.2);
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- IDENTICAL NAVBAR AS ADMIN DASHBOARD -->
+  <nav class="admin-navbar">
+    <div class="admin-brand">College of Computer Studies Admin</div>
+    <ul class="admin-links">
+      <li><a href="/admin" {% if request.endpoint == 'admin_dashboard' %}class="active"{% endif %}>Home</a></li>
+      <li><a href="#" onclick="openSearch()">Search</a></li>
+      <li><a href="/admin/students" {% if request.endpoint == 'admin_students' %}class="active"{% endif %}>Students</a></li>
+      <li><a href="/admin/sitin" {% if request.endpoint == 'admin_sitin' %}class="active"{% endif %}>Sit-in</a></li>
+      <li><a href="/admin/records" {% if request.endpoint == 'admin_records' %}class="active"{% endif %}>View Sit-in Records</a></li>
+      <li><a href="/admin/reports" {% if request.endpoint == 'admin_reports' %}class="active"{% endif %}>Sit-in Reports</a></li>
+      <li><a href="/admin/generate_reports" {% if request.endpoint == 'admin_generate_reports' %}class="active"{% endif %}>Generate Reports</a></li>
+      <li><a href="/admin/feedback" {% if request.endpoint == 'admin_feedback' %}class="active"{% endif %}>Feedback Reports</a></li>
+      <li><a href="/admin/testimonials" {% if request.endpoint == 'admin_testimonials' %}class="active"{% endif %}>Student Testimonials</a></li>
+      <li><a href="/admin/reservation" {% if request.endpoint == 'admin_reservation' %}class="active"{% endif %}>Reservation</a></li>
+      <li><a href="/admin/lab_settings" {% if request.endpoint == 'admin_lab_settings' %}class="active"{% endif %}>Lab Settings</a></li>
+      <li><a href="/admin/analytics" {% if request.endpoint == 'admin_analytics' %}class="active"{% endif %}>Analytics</a></li>
+      <li><a href="#" id="darkModeToggle">🌓 Dark/Light</a></li>
+      <!-- Notification Bell -->
+      <li class="has-dropdown-right">
+        <a href="#" id="adminNotifBell" onclick="toggleAdminNotif(event)">
+          🔔 <span id="adminNotifBadge" style="background:#e74c3c; color:white; font-size:10px; border-radius:10px; padding:2px 6px; margin-left:4px; display:none;">0</span>
+        </a>
+        <ul class="dropdown-menu-right" id="adminNotifDropdown" style="display:none; min-width:280px;">
+          <li style="padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <span style="font-size:12px; font-weight:600;">🔔 New Reservations</span>
+            <button onclick="markAllAdminNotifs()" style="float:right; background:transparent; border:none; color:#a0b4ff; cursor:pointer; font-size:11px;">Mark all read</button>
+          </li>
+          <div id="adminNotifList"><li style="padding:10px 16px;"><span style="color:rgba(255,255,255,0.5);">No new notifications</span></li></div>
+        </ul>
+      </li>
+      <li><a href="/logout" class="logout-btn">Log out</a></li>
+    </ul>
+  </nav>
+
+  <div class="dash-header">Generate Reports</div>
+
+  <div class="admin-body">
+    <div class="admin-card" style="max-width:100%;">
+      <div class="card-header">📄 Filter Sit-in Records</div>
+      <div class="card-body">
+        <form method="GET" action="/admin/generate_reports" class="filter-form">
+          <div class="filter-group">
+            <div class="form-group"><label>From Date</label><input type="date" name="from_date" value="{{ from_date }}"></div>
+            <div class="form-group"><label>To Date</label><input type="date" name="to_date" value="{{ to_date }}"></div>
+            <div class="form-group"><label>Lab</label><select name="lab"><option value="">All Labs</option>{% for lab in labs %}<option value="{{ lab }}" {% if selected_lab == lab %}selected{% endif %}>{{ lab }}</option>{% endfor %}</select></div>
+            <div class="form-group"><label>Status</label><select name="status"><option value="">All</option><option value="Active" {% if status == 'Active' %}selected{% endif %}>Active</option><option value="Done" {% if status == 'Done' %}selected{% endif %}>Done</option></select></div>
+            <div class="form-group"><button type="submit" class="btn-blue">Apply Filters</button></div>
+          </div>
+        </form>
+        <div style="margin-bottom: 20px;">
+          <a href="/admin/reports/export/csv?from_date={{ from_date }}&to_date={{ to_date }}&lab={{ selected_lab }}&status={{ status }}" class="btn-export">📥 Export to CSV</a>
+        </div>
+        <div class="report-table">
+          <table class="admin-table" id="reportTable">
+            <thead>
+              <tr><th>ID</th><th>ID Number</th><th>Name</th><th>Purpose</th><th>Lab</th><th>PC</th><th>Session</th><th>Time In</th><th>Time Out</th><th>Status</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+              {% for s in records %}
+              <tr>
+                <td>{{ s.id }}</td><td>{{ s.id_number }}</td><td>{{ s.firstname }} {{ s.lastname }}</td>
+                <td>{{ s.purpose }}</td><td>{{ s.lab }}</td><td>{{ s.pc_number or '—' }}</td>
+                <td>{{ s.session }}</td><td>{{ s.time_in[:16] if s.time_in else '—' }}</td>
+                <td>{{ s.time_out[:16] if s.time_out else '—' }}</td>
+                <td>{% if s.status == 'Active' %}<span class="badge-green">Active</span>{% else %}<span class="badge-gray">Done</span>{% endif %}</td>
+                <td>{{ s.date[:10] }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="11" style="text-align:center;color:#aaa;">No records found</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="searchModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box"><div class="modal-header"><span>Search Student</span><span onclick="closeSearch()">✕</span></div>
+      <form action="/admin/search" method="POST" style="padding:20px;"><input type="text" name="query" placeholder="Search..."><button type="submit" class="btn-blue">Search</button></form>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      var table = $('#reportTable');
+      if (table.find('tbody tr').length > 0 && table.find('tbody tr td[colspan="11"]').length === 0) {
+        table.DataTable({ order: [[10, 'desc']], pageLength: 15, language: { emptyTable: "No records" } });
+      }
+    });
+    function openSearch() { document.getElementById('searchModal').style.display = 'flex'; }
+    function closeSearch(){ document.getElementById('searchModal').style.display = 'none'; }
+
+    // Admin Notifications (identical to dashboard)
+    let adminNotifOpen = false;
+    function toggleAdminNotif(e) { e.preventDefault(); const dd=document.getElementById('adminNotifDropdown'); adminNotifOpen=!adminNotifOpen; dd.style.display=adminNotifOpen?'block':'none'; if(adminNotifOpen) loadAdminNotifications(); }
+    document.addEventListener('click',function(e){ if(!e.target.closest('.has-dropdown-right')){ const dd=document.getElementById('adminNotifDropdown'); if(dd) dd.style.display='none'; adminNotifOpen=false; } });
+    function loadAdminNotifications() { fetch('/admin/notifications/list').then(r=>r.json()).then(data=>{ const c=document.getElementById('adminNotifList'); if(!c) return; if(data.length===0){ c.innerHTML='<li style="padding:10px 16px;"><span style="color:rgba(255,255,255,0.5);">No notifications</span></li>'; return; } let html=''; data.forEach(n=>{ const unreadClass=n.is_read===0?'notification-item-unread':'notification-item-read'; html+=`<div class="${unreadClass}" style="padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.06);"><div style="font-size:11px; color:#6b7db3;">${n.created_at.slice(0,16)}</div><div style="font-size:12px;">${n.message}</div>${n.is_read===0?`<button class="mark-read-btn" onclick="markAdminNotifRead(${n.id})">Mark read</button>`:''}</div>`; }); c.innerHTML=html; }); }
+    function markAdminNotifRead(id){ fetch(`/admin/notifications/mark_read/${id}`,{method:'POST'}).then(()=>{ updateAdminNotifCount(); if(adminNotifOpen) loadAdminNotifications(); }); }
+    function markAllAdminNotifs(){ fetch('/admin/notifications/mark_all_read',{method:'POST'}).then(()=>{ updateAdminNotifCount(); if(adminNotifOpen) loadAdminNotifications(); }); }
+    function updateAdminNotifCount(){ fetch('/admin/notifications/count').then(r=>r.json()).then(data=>{ const badge=document.getElementById('adminNotifBadge'); if(badge){ if(data.count>0){ badge.style.display='inline'; badge.textContent=data.count; } else badge.style.display='none'; } }); }
+    updateAdminNotifCount(); setInterval(updateAdminNotifCount,30000);
+
+    function initDarkMode() { const isDark = localStorage.getItem('darkMode')==='true'; if(isDark) document.body.classList.add('dark-mode'); const toggle=document.getElementById('darkModeToggle'); if(toggle) toggle.addEventListener('click',(e)=>{ e.preventDefault(); document.body.classList.toggle('dark-mode'); localStorage.setItem('darkMode',document.body.classList.contains('dark-mode')); }); }
+    initDarkMode();
+  </script>
+</body>
+</html>

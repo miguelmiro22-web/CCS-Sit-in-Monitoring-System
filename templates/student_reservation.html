@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CCS | Reservation</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <style>
+    /* ---- PC Grid: 5 columns, 10 rows each (vertical layout) ---- */
+    .pc-grid {
+      display: grid;
+      grid-auto-flow: column;
+      grid-template-rows: repeat(10, 1fr);
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+      background: rgba(255,255,255,0.02);
+      padding: 15px;
+      border-radius: 12px;
+    }
+    .pc-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      padding: 10px 5px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .pc-btn svg {
+      width: 24px;
+      height: 24px;
+      stroke: #a0b4ff;
+      stroke-width: 1.5;
+      fill: none;
+    }
+    .pc-btn span {
+      font-size: 12px;
+      font-weight: 500;
+      color: white;
+    }
+    .pc-btn.selected {
+      background: linear-gradient(135deg, #4a6cf7, #7c3aed);
+      border-color: #4a6cf7;
+      box-shadow: 0 0 0 2px rgba(74,108,247,0.4);
+      transform: scale(0.98);
+    }
+    .pc-btn.selected svg {
+      stroke: white;
+    }
+    .pc-btn.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: rgba(255,255,255,0.05);
+      pointer-events: none;
+    }
+    .pc-btn:not(.disabled):not(.selected):hover {
+      background: rgba(74,108,247,0.5);
+      transform: translateY(-2px);
+    }
+
+    /* Time slot buttons */
+    .time-slots {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .time-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      color: white;
+      transition: all 0.2s;
+    }
+    .time-btn.selected {
+      background: #4a6cf7;
+      border-color: #4a6cf7;
+    }
+    .time-btn:hover {
+      background: rgba(74,108,247,0.6);
+    }
+
+    /* Toggle reservation button */
+    .toggle-reserve-btn {
+      background: linear-gradient(135deg, #e6a817, #f0c040);
+      border: none;
+      color: #1a1a00;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      width: 100%;
+      transition: all 0.2s;
+    }
+    .toggle-reserve-btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.9;
+    }
+
+    /* Disabled form styling */
+    .form-disabled .form-group input,
+    .form-disabled .form-group select,
+    .form-disabled .time-btn,
+    .form-disabled .pc-btn,
+    .form-disabled .btn-submit {
+      opacity: 0.6;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+
+    /* Form styling */
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #a0b4ff;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 10px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+    }
+    .error-msg {
+      background: rgba(231,76,60,0.2);
+      color: #ff6b6b;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .btn-submit {
+      background: linear-gradient(135deg, #4a6cf7, #7c3aed);
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      width: 100%;
+      transition: all 0.2s;
+    }
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(74,108,247,0.4);
+    }
+    .btn-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Status badges */
+    .status-pending { background: #ff9800; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
+    .status-approved { background: #4caf50; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
+    .status-rejected { background: #f44336; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; display: inline-block; }
+  </style>
+</head>
+<body>
+  <nav class="admin-navbar">
+    <div class="admin-brand">College of Computer Studies</div>
+    <ul class="admin-links">
+      <li><a href="/student">Home</a></li>
+      <li><a href="/student/history">History</a></li>
+      <li><a href="/student/reservation" class="active">Reservation</a></li>
+      <li><a href="#" id="darkModeToggle">🌓 Dark/Light</a></li>
+      <li><a href="/logout" class="logout-btn">Log out</a></li>
+    </ul>
+  </nav>
+
+  <div class="admin-body">
+    <div class="admin-card">
+      <div class="card-header">📅 Reserve a Lab Slot (Max 1 hour)</div>
+      <div class="card-body">
+        <!-- Toggle Button -->
+        <button type="button" id="toggleReservationBtn" class="toggle-reserve-btn">🔴 Disable Reservations</button>
+
+        {% if error %}
+        <div class="error-msg">{{ error }}</div>
+        {% endif %}
+
+        <div id="reservationFormContainer">
+          <form id="reservationForm" method="POST" action="/student/reservation">
+            <!-- Lab Selection -->
+            <div class="form-group">
+              <label>🏢 Select Lab</label>
+              <select name="lab" id="labSelect" required>
+                <option value="">-- Choose Lab --</option>
+                <option value="Lab 517">Lab 517</option>
+                <option value="Lab 518">Lab 518</option>
+                <option value="Lab 519">Lab 519</option>
+                <option value="Lab 524">Lab 524</option>
+                <option value="Lab 526">Lab 526</option>
+              </select>
+            </div>
+
+            <!-- Purpose -->
+            <div class="form-group">
+              <label>📝 Purpose</label>
+              <input type="text" name="purpose" id="purposeInput" placeholder="e.g., C Programming, Java Project" required>
+            </div>
+
+            <!-- Date -->
+            <div class="form-group">
+              <label>📅 Date</label>
+              <input type="date" name="date" id="datePicker" required>
+            </div>
+
+            <!-- Time slots (1‑hour blocks) -->
+            <div class="form-group">
+              <label>⏰ Select Time Slot (1 hour)</label>
+              <div id="timeSlotsContainer" class="time-slots"></div>
+              <input type="hidden" name="start_time" id="selectedStartTime" required>
+            </div>
+
+            <!-- PC Grid: 5 columns, 10 rows (vertical order) -->
+            <div class="form-group">
+              <label>💻 Select PC</label>
+              <div id="pcContainer" class="pc-grid">
+                {% for i in range(1, 51) %}
+                  {% set pc_number = "PC" ~ i %}
+                  <button type="button" class="pc-btn disabled" data-pc="{{ pc_number }}">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                      <rect x="4" y="6" width="16" height="12" rx="1" ry="1" stroke="currentColor" fill="none"/>
+                      <path d="M8 18h8" stroke="currentColor" stroke-linecap="round"/>
+                      <path d="M12 18v2" stroke="currentColor"/>
+                    </svg>
+                    <span>{{ pc_number }}</span>
+                  </button>
+                {% endfor %}
+              </div>
+              <input type="hidden" name="pc_number" id="selectedPc" required>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn" disabled>Submit Reservation</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- My Reservations Table -->
+    <div class="admin-card" style="margin-top:20px; max-width:100%;">
+      <div class="card-header">📋 My Reservations</div>
+      <div class="card-body">
+        <table class="admin-table" id="reservationTable">
+          <thead>
+            <tr>
+              <th>Lab</th>
+              <th>Purpose</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>PC</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in reservations %}
+            <tr>
+              <td>{{ r.lab }}</td>
+              <td>{{ r.purpose }}</td>
+              <td>{{ r.date }}</td>
+              <td>{{ r.start_time or '—' }} - {{ r.end_time or '—' }}</td>
+              <td>{{ r.pc_number or '—' }}</td>
+              <td>
+                {% if r.status == 'Pending' %}<span class="status-pending">Pending</span>
+                {% elif r.status == 'Approved' %}<span class="status-approved">Approved</span>
+                {% else %}<span class="status-rejected">Rejected</span>{% endif %}
+               </td>
+            </tr>
+            {% else %}
+              <tr><td colspan="6" style="text-align:center;color:#aaa;">No reservations yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script>
+    // Dark mode
+    function initDarkMode() {
+      const isDark = localStorage.getItem('darkMode') === 'true';
+      if (isDark) document.body.classList.add('dark-mode');
+      const toggle = document.getElementById('darkModeToggle');
+      if (toggle) {
+        toggle.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.body.classList.toggle('dark-mode');
+          localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        });
+      }
+    }
+    initDarkMode();
+
+    $(document).ready(function() {
+      let table = $('#reservationTable');
+      if (table.find('tbody tr').length > 0 && table.find('tbody tr td[colspan="6"]').length === 0) {
+        table.DataTable({ pageLength: 10, language: { emptyTable: "No reservations yet." } });
+      }
+    });
+
+    // Time slots (08:00 – 19:00)
+    const timeSlots = [];
+    for (let hour = 8; hour <= 19; hour++) {
+      const start = `${hour.toString().padStart(2,'0')}:00`;
+      const end = `${(hour+1).toString().padStart(2,'0')}:00`;
+      timeSlots.push({ start, end, label: `${start} - ${end}` });
+    }
+
+    const labSelect = document.getElementById('labSelect');
+    const datePicker = document.getElementById('datePicker');
+    const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+    const selectedStartTime = document.getElementById('selectedStartTime');
+    const pcContainer = document.getElementById('pcContainer');
+    const selectedPcInput = document.getElementById('selectedPc');
+    const submitBtn = document.getElementById('submitBtn');
+    const purposeInput = document.getElementById('purposeInput');
+    const formContainer = document.getElementById('reservationFormContainer');
+    const toggleBtn = document.getElementById('toggleReservationBtn');
+
+    // Disable/enable reservation toggle (persistent)
+    let reservationsEnabled = localStorage.getItem('reservationsEnabled') !== 'false';
+    function setFormEnabled(enabled) {
+      if (enabled) {
+        formContainer.classList.remove('form-disabled');
+        toggleBtn.textContent = '🔴 Disable Reservations';
+        toggleBtn.style.background = 'linear-gradient(135deg, #e6a817, #f0c040)';
+      } else {
+        formContainer.classList.add('form-disabled');
+        toggleBtn.textContent = '🟢 Enable Reservations';
+        toggleBtn.style.background = 'linear-gradient(135deg, #27ae60, #1e8449)';
+      }
+      localStorage.setItem('reservationsEnabled', enabled);
+    }
+    toggleBtn.addEventListener('click', () => {
+      const currentlyEnabled = !formContainer.classList.contains('form-disabled');
+      setFormEnabled(!currentlyEnabled);
+    });
+    const stored = localStorage.getItem('reservationsEnabled');
+    if (stored === 'false') setFormEnabled(false);
+    else setFormEnabled(true);
+
+    function disableAllPCs() {
+      const allPCs = document.querySelectorAll('.pc-btn');
+      allPCs.forEach(btn => {
+        btn.classList.add('disabled');
+        btn.classList.remove('selected');
+      });
+      selectedPcInput.value = '';
+      submitBtn.disabled = true;
+    }
+
+    function enableAvailablePCs(availablePCs) {
+      const allPCs = document.querySelectorAll('.pc-btn');
+      allPCs.forEach(btn => {
+        const pc = btn.dataset.pc;
+        if (availablePCs.includes(pc)) {
+          btn.classList.remove('disabled');
+          btn.style.pointerEvents = 'auto';
+        } else {
+          btn.classList.add('disabled');
+          btn.style.pointerEvents = 'none';
+        }
+        btn.classList.remove('selected');
+      });
+      selectedPcInput.value = '';
+      submitBtn.disabled = true;
+    }
+
+    function loadAvailablePCsAndEnable() {
+      const lab = labSelect.value;
+      const date = datePicker.value;
+      const startTime = selectedStartTime.value;
+      if (!lab || !date || !startTime) {
+        disableAllPCs();
+        return;
+      }
+      fetch(`/student/available_pcs?lab=${encodeURIComponent(lab)}&date=${date}&start_time=${startTime}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            console.error(data.error);
+            disableAllPCs();
+            return;
+          }
+          enableAvailablePCs(data.available_pcs);
+        })
+        .catch(err => {
+          console.error(err);
+          disableAllPCs();
+        });
+    }
+
+    function renderTimeSlots() {
+      timeSlotsContainer.innerHTML = '';
+      timeSlots.forEach(slot => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'time-btn';
+        btn.textContent = slot.label;
+        btn.dataset.start = slot.start;
+        btn.addEventListener('click', () => {
+          if (formContainer.classList.contains('form-disabled')) return;
+          document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selectedStartTime.value = slot.start;
+          loadAvailablePCsAndEnable();
+          validateForm();
+        });
+        timeSlotsContainer.appendChild(btn);
+      });
+    }
+
+    function validateForm() {
+      if (formContainer.classList.contains('form-disabled')) {
+        submitBtn.disabled = true;
+        return;
+      }
+      const lab = labSelect.value;
+      const purpose = purposeInput.value.trim();
+      const date = datePicker.value;
+      const startTime = selectedStartTime.value;
+      const pc = selectedPcInput.value;
+      submitBtn.disabled = !(lab && purpose && date && startTime && pc);
+    }
+
+    labSelect.addEventListener('change', () => {
+      selectedStartTime.value = '';
+      document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('selected'));
+      disableAllPCs();
+      validateForm();
+    });
+    datePicker.addEventListener('change', () => {
+      selectedStartTime.value = '';
+      document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('selected'));
+      disableAllPCs();
+      validateForm();
+    });
+    purposeInput.addEventListener('input', validateForm);
+
+    pcContainer.addEventListener('click', (e) => {
+      if (formContainer.classList.contains('form-disabled')) return;
+      const btn = e.target.closest('.pc-btn');
+      if (!btn) return;
+      if (btn.classList.contains('disabled')) return;
+      document.querySelectorAll('.pc-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedPcInput.value = btn.dataset.pc;
+      validateForm();
+    });
+
+    renderTimeSlots();
+    const today = new Date().toISOString().split('T')[0];
+    datePicker.setAttribute('min', today);
+    disableAllPCs();
+  </script>
+</body>
+</html>

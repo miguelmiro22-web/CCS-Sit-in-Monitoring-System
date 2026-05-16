@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Student</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .notification-item-unread { background: rgba(160,180,255,0.1); border-left: 3px solid #a0b4ff; }
+    .notification-item-read { opacity: 0.7; }
+    .mark-read-btn { float: right; font-size: 10px; padding: 2px 8px; background: rgba(160,180,255,0.2); border: none; border-radius: 4px; color: white; cursor: pointer; }
+    .mark-read-btn:hover { background: rgba(160,180,255,0.4); }
+  </style>
+</head>
+<body>
+  <nav class="admin-navbar">
+    <div class="admin-brand">College of Computer Studies Admin</div>
+    <ul class="admin-links">
+      <li><a href="/admin">Home</a></li>
+      <li><a href="/admin/students">Students</a></li>
+      <li><a href="#" id="darkModeToggle">🌓 Dark/Light</a></li>
+      <!-- Notification Bell -->
+      <li class="has-dropdown-right">
+        <a href="#" id="adminNotifBell" onclick="toggleAdminNotif(event)">
+          🔔 <span id="adminNotifBadge" style="background:#e74c3c; color:white; font-size:10px; border-radius:10px; padding:2px 6px; margin-left:4px; display:none;">0</span>
+        </a>
+        <ul class="dropdown-menu-right" id="adminNotifDropdown" style="display:none; min-width:280px;">
+          <li style="padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <span style="font-size:12px; font-weight:600;">🔔 New Reservations</span>
+            <button onclick="markAllAdminNotifs()" style="float:right; background:transparent; border:none; color:#a0b4ff; cursor:pointer; font-size:11px;">Mark all read</button>
+          </li>
+          <div id="adminNotifList"><li style="padding:10px 16px;"><span style="color:rgba(255,255,255,0.5);">No new notifications</span></li></div>
+        </ul>
+      </li>
+      <li><a href="/logout" class="logout-btn">Log out</a></li>
+    </ul>
+  </nav>
+
+  <div class="admin-body">
+    <div class="admin-card">
+      <div class="card-header">✏️ Edit Student</div>
+      <div class="card-body">
+        <form action="/admin/students/edit/{{ student.id_number }}" method="POST">
+          <div class="form-group"><label>ID Number</label><input type="text" value="{{ student.id_number }}" disabled style="background:rgba(255,255,255,0.05);"></div>
+          <div class="form-group"><label>Last Name</label><input type="text" name="lastname" value="{{ student.lastname }}" required></div>
+          <div class="form-group"><label>First Name</label><input type="text" name="firstname" value="{{ student.firstname }}" required></div>
+          <div class="form-group"><label>Middle Name</label><input type="text" name="middlename" value="{{ student.middlename or '' }}"></div>
+          <div class="form-group"><label>Course</label><select name="course" required><option value="BSIT" {% if student.course == 'BSIT' %}selected{% endif %}>BSIT</option><option value="BSCS" {% if student.course == 'BSCS' %}selected{% endif %}>BSCS</option><option value="BSEMC" {% if student.course == 'BSEMC' %}selected{% endif %}>BSEMC</option><option value="ACT" {% if student.course == 'ACT' %}selected{% endif %}>ACT</option></select></div>
+          <div class="form-group"><label>Year Level</label><select name="course_level" required><option value="1" {% if student.course_level == 1 %}selected{% endif %}>1st Year</option><option value="2" {% if student.course_level == 2 %}selected{% endif %}>2nd Year</option><option value="3" {% if student.course_level == 3 %}selected{% endif %}>3rd Year</option><option value="4" {% if student.course_level == 4 %}selected{% endif %}>4th Year</option></select></div>
+          <div class="form-group"><label>Email</label><input type="email" name="email" value="{{ student.email }}" required></div>
+          <div class="form-group"><label>Address</label><input type="text" name="address" value="{{ student.address }}" required></div>
+          <div style="display:flex; gap:10px;"><button type="submit" class="btn">Save Changes</button><a href="/admin/students" class="btn-gray">Cancel</a></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Admin Notifications (same as above)
+    let adminNotifOpen = false;
+    function toggleAdminNotif(e) {
+      e.preventDefault();
+      const dd = document.getElementById('adminNotifDropdown');
+      adminNotifOpen = !adminNotifOpen;
+      dd.style.display = adminNotifOpen ? 'block' : 'none';
+      if (adminNotifOpen) loadAdminNotifications();
+    }
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.has-dropdown-right')) {
+        const dd = document.getElementById('adminNotifDropdown');
+        if (dd) dd.style.display = 'none';
+        adminNotifOpen = false;
+      }
+    });
+    function loadAdminNotifications() {
+      fetch('/admin/notifications/list')
+        .then(r => r.json())
+        .then(data => {
+          const c = document.getElementById('adminNotifList');
+          if (!c) return;
+          if (data.length === 0) {
+            c.innerHTML = '<li style="padding:10px 16px;"><span style="color:rgba(255,255,255,0.5);">No notifications</span></li>';
+            return;
+          }
+          let html = '';
+          data.forEach(n => {
+            const unreadClass = n.is_read === 0 ? 'notification-item-unread' : 'notification-item-read';
+            html += `<div class="${unreadClass}" style="padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.06);">
+              <div style="font-size:11px; color:#6b7db3;">${n.created_at.slice(0,16)}</div>
+              <div style="font-size:12px;">${n.message}</div>
+              ${n.is_read === 0 ? `<button class="mark-read-btn" onclick="markAdminNotifRead(${n.id})">Mark read</button>` : ''}
+            </div>`;
+          });
+          c.innerHTML = html;
+        });
+    }
+    function markAdminNotifRead(id) {
+      fetch(`/admin/notifications/mark_read/${id}`, { method: 'POST' })
+        .then(() => { updateAdminNotifCount(); if (adminNotifOpen) loadAdminNotifications(); });
+    }
+    function markAllAdminNotifs() {
+      fetch('/admin/notifications/mark_all_read', { method: 'POST' })
+        .then(() => { updateAdminNotifCount(); if (adminNotifOpen) loadAdminNotifications(); });
+    }
+    function updateAdminNotifCount() {
+      fetch('/admin/notifications/count')
+        .then(r => r.json())
+        .then(data => {
+          const badge = document.getElementById('adminNotifBadge');
+          if (badge) {
+            if (data.count > 0) {
+              badge.style.display = 'inline';
+              badge.textContent = data.count;
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        });
+    }
+    updateAdminNotifCount();
+    setInterval(updateAdminNotifCount, 30000);
+
+    function initDarkMode() {
+      const isDark = localStorage.getItem('darkMode') === 'true';
+      if (isDark) document.body.classList.add('dark-mode');
+      const toggle = document.getElementById('darkModeToggle');
+      if (toggle) toggle.addEventListener('click', (e) => { e.preventDefault(); document.body.classList.toggle('dark-mode'); localStorage.setItem('darkMode', document.body.classList.contains('dark-mode')); });
+    }
+    initDarkMode();
+  </script>
+</body>
+</html>

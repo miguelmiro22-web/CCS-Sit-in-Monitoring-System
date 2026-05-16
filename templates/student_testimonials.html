@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CCS | Testimonials</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .star { font-size: 24px; cursor: pointer; transition: color 0.2s; }
+    .testimonial-item { padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .testimonial-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.9); }
+    .testimonial-date { font-size: 11px; color: rgba(255,255,255,0.4); }
+    .testimonial-rating { margin: 6px 0; }
+    .testimonial-message { font-size: 13px; color: rgba(255,255,255,0.7); margin: 0; }
+  </style>
+</head>
+<body>
+  <nav class="admin-navbar">
+    <div class="admin-brand">Dashboard</div>
+    <ul class="admin-links">
+      <li><a href="/student">Home</a></li>
+      <li><a href="/student/summary">Summary</a></li>
+      <li><a href="/student/sessions">Sessions</a></li>
+      <li><a href="/student/reservation">Reservation</a></li>
+      <li><a href="/student/testimonials" class="active">Testimonials</a></li>
+      <li><a href="/student/edit_profile">Edit Profile</a></li>
+      <li><a href="/student/history">History</a></li>
+      <li><a href="/student/labs">Labs</a></li>
+      <li><a href="#" id="darkModeToggle">🌓 Dark/Light</a></li>
+      <li><a href="/logout" class="logout-btn">Log out</a></li>
+    </ul>
+  </nav>
+  <div class="dash-header">Testimonials</div>
+  <div class="admin-body">
+    <div style="display:grid; grid-template-columns:1fr 2fr; gap:16px;">
+      <div class="admin-card" style="height:fit-content;">
+        <div class="card-header">✍️ Write a Testimonial</div>
+        <div class="card-body">
+          {% if my_testimonial %}
+            <p style="color:#4caf50; text-align:center;">✅ You have already submitted a testimonial. Thank you!</p>
+            <div style="background:rgba(255,255,255,0.05); border-radius:8px; padding:12px; margin-top:10px;"><p style="font-size:12px; color:#a0b4ff;">Your testimonial:</p><div style="margin:5px 0;">{% for i in range(my_testimonial.rating) %}⭐{% endfor %}</div><p style="font-size:13px;">{{ my_testimonial.message }}</p></div>
+          {% else %}
+            <form action="/student/testimonials" method="POST">
+              <div class="form-group"><label>Rating</label><div id="star-container" style="display:flex; gap:6px; margin-bottom:8px;"><span class="star" data-val="1" onclick="setRating(1)" style="color:rgba(255,255,255,0.3);">★</span><span class="star" data-val="2" onclick="setRating(2)" style="color:rgba(255,255,255,0.3);">★</span><span class="star" data-val="3" onclick="setRating(3)" style="color:rgba(255,255,255,0.3);">★</span><span class="star" data-val="4" onclick="setRating(4)" style="color:rgba(255,255,255,0.3);">★</span><span class="star" data-val="5" onclick="setRating(5)" style="color:rgba(255,255,255,0.3);">★</span></div><input type="hidden" name="rating" id="rating-input" value="5"></div>
+              <div class="form-group"><label>Your Testimonial</label><textarea name="message" rows="4" placeholder="Share your experience..." style="width:100%; padding:10px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:white; font-size:14px; resize:vertical;" required></textarea></div>
+              <button type="submit" class="btn">Submit Testimonial</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+      <div class="admin-card">
+        <div class="card-header">💬 All Testimonials</div>
+        <div class="card-body" style="max-height:500px; overflow-y:auto;">
+          {% for t in testimonials %}
+          <div class="testimonial-item"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><span class="testimonial-name">{{ t.firstname }} {{ t.lastname }}</span><span class="testimonial-date">{{ t.date[:10] }}</span></div><div class="testimonial-rating">{% for i in range(5) %}{% if i < t.rating %}<span style="color:#e6a817; font-size:14px;">★</span>{% else %}<span style="color:rgba(255,255,255,0.2); font-size:14px;">★</span>{% endif %}{% endfor %}</div><p class="testimonial-message">{{ t.message }}</p></div>
+          {% else %}
+          <p style="color:rgba(255,255,255,0.4); text-align:center;">No testimonials yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    function setRating(val) { document.getElementById('rating-input').value = val; var stars = document.querySelectorAll('.star'); stars.forEach(function(s) { s.style.color = parseInt(s.getAttribute('data-val')) <= val ? '#e6a817' : 'rgba(255,255,255,0.3)'; }); } setRating(5);
+    function initDarkMode() { const isDark = localStorage.getItem('darkMode') === 'true'; if (isDark) document.body.classList.add('dark-mode'); const toggle = document.getElementById('darkModeToggle'); if (toggle) toggle.addEventListener('click', (e) => { e.preventDefault(); document.body.classList.toggle('dark-mode'); localStorage.setItem('darkMode', document.body.classList.contains('dark-mode')); }); }
+    initDarkMode();
+  </script>
+</body>
+</html>

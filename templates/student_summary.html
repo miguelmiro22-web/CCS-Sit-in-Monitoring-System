@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CCS | Sit-in Summary</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .summary-stats {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      flex: 1;
+      min-width: 150px;
+      backdrop-filter: blur(10px);
+    }
+    .stat-card h3 {
+      font-size: 28px;
+      color: #a0b4ff;
+      margin: 0;
+    }
+    .stat-card p {
+      margin: 5px 0 0;
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+    }
+  </style>
+</head>
+<body>
+  <nav class="admin-navbar">
+    <div class="admin-brand">College of Computer Studies</div>
+    <ul class="admin-links">
+      <li><a href="/student">Home</a></li>
+      <li><a href="/student/summary" class="active">Summary</a></li>
+      <li><a href="/student/sessions">Sessions</a></li>
+      <li><a href="/student/reservation">Reservation</a></li>
+      <li><a href="/student/testimonials">Testimonials</a></li>
+      <li><a href="/student/edit_profile">Edit Profile</a></li>
+      <li><a href="/student/history">History</a></li>
+      <li><a href="/student/labs">Labs</a></li>
+      <li><a href="#" id="darkModeToggle">🌓 Dark/Light</a></li>
+      <li><a href="/logout" class="logout-btn">Log out</a></li>
+    </ul>
+  </nav>
+  <div class="dash-header">Sit-in Summary</div>
+  <div class="admin-body">
+    <div class="summary-stats">
+      <div class="stat-card"><h3>{{ total_hours }}</h3><p>Total Sit-in Hours</p></div>
+      <div class="stat-card"><h3>{{ number_of_sessions }}</h3><p>Number of Sessions</p></div>
+      <div class="stat-card"><h3>{{ avg_hours }}</h3><p>Avg Session Duration (hrs)</p></div>
+      <div class="stat-card"><h3>{{ longest_session }}</h3><p>Longest Session</p></div>
+    </div>
+  </div>
+  <script>
+    function initDarkMode() {
+      const isDark = localStorage.getItem('darkMode') === 'true';
+      if (isDark) document.body.classList.add('dark-mode');
+      const toggle = document.getElementById('darkModeToggle');
+      if (toggle) toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+      });
+    }
+    initDarkMode();
+  </script>
+</body>
+</html>

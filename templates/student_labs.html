@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CCS | Lab Availability</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="admin-navbar">
+    <div class="admin-brand">College of Computer Studies</div>
+    <ul class="admin-links">
+      <li><a href="/student">Home</a></li>
+      <li><a href="/student/summary">Summary</a></li>
+      <li><a href="/student/sessions">Sessions</a></li>
+      <li><a href="/student/reservation">Reservation</a></li>
+      <li><a href="/student/testimonials">Testimonials</a></li>
+      <li><a href="/student/edit_profile">Edit Profile</a></li>
+      <li><a href="/student/history">History</a></li>
+      <li><a href="/student/labs" class="active">Labs</a></li>
+      <li><a href="#" id="darkModeToggle">🌓 Dark/Light</a></li>
+      <li><a href="/logout" class="logout-btn">Log out</a></li>
+    </ul>
+  </nav>
+  <div class="dash-header">Lab Availability</div>
+  <div class="admin-body">
+    <div class="admin-card" style="max-width:100%;">
+      <div class="card-header">💻 Lab Status</div>
+      <div class="card-body">
+        <table class="admin-table">
+          <thead><tr><th>Lab</th><th>Reservations</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for setting in lab_settings %}
+            <tr>
+              <td>{{ setting.lab }}</td>
+              <td>{% if setting.reservation_enabled == 1 %}Enabled{% else %}Disabled{% endif %}</td>
+              <td><span class="badge-green">Open</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script>
+    function initDarkMode() {
+      const isDark = localStorage.getItem('darkMode') === 'true';
+      if (isDark) document.body.classList.add('dark-mode');
+      const toggle = document.getElementById('darkModeToggle');
+      if (toggle) toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+      });
+    }
+    initDarkMode();
+  </script>
+</body>
+</html>
