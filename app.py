@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, url_for, jsonify, Response
+from flask import Flask, render_template, request, redirect, session, url_for, jsonify, Response, flash
 import sqlite3
 import hashlib
 import webbrowser
@@ -31,6 +31,8 @@ def init_db():
             password TEXT NOT NULL,
             remaining_session INTEGER DEFAULT 30,
             photo TEXT,
+            points INTEGER DEFAULT 0,
+            converted_sessions INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -103,21 +105,19 @@ def init_db():
             reservation_enabled INTEGER DEFAULT 1
         )
     ''')
-    # Add missing columns to reservation (for existing databases)
     try:
         c.execute('ALTER TABLE reservation ADD COLUMN start_time TEXT')
-    except sqlite3.OperationalError:
+    except:
         pass
     try:
         c.execute('ALTER TABLE reservation ADD COLUMN end_time TEXT')
-    except sqlite3.OperationalError:
+    except:
         pass
     try:
         c.execute('ALTER TABLE reservation ADD COLUMN pc_number TEXT')
-    except sqlite3.OperationalError:
+    except:
         pass
 
-    # Create lab_pcs table (50 PCs per lab)
     c.execute('''
         CREATE TABLE IF NOT EXISTS lab_pcs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,13 +127,13 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    labs = ['Lab 517', 'Lab 518', 'Lab 519', 'Lab 524', 'Lab 526']
+    # UPDATED LAB LIST
+    labs = ['Lab 517', 'Lab 524', 'Lab 526', 'Lab 528', 'Lab 530', 'Lab 540', 'Lab 542', 'Lab 544']
     for lab in labs:
         for i in range(1, 51):
             c.execute('INSERT OR IGNORE INTO lab_pcs (lab, pc_number) VALUES (?, ?)', (lab, f'PC{i}'))
         c.execute('INSERT OR IGNORE INTO lab_settings (lab, reservation_enabled) VALUES (?, 1)', (lab,))
 
-    # Create admin_notifications table for reservation alerts
     c.execute('''
         CREATE TABLE IF NOT EXISTS admin_notifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,6 +147,17 @@ def init_db():
             pc_number TEXT,
             is_read INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS point_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id TEXT NOT NULL,
+            points INTEGER NOT NULL,
+            action TEXT NOT NULL,
+            remarks TEXT,
+            date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     conn.commit()
@@ -256,15 +267,28 @@ def register():
 
     return render_template('index.html', register_error=error, show_page='register')
 
-# ─── STUDENT DASHBOARD ─────────────────────────────────────────────
+# ─── STUDENT DASHBOARD (with points, recent sessions) ───────────────
 @app.route('/student')
 @login_required
 def student_dashboard():
-    conn          = get_db()
+    conn = get_db()
     announcements = conn.execute('SELECT * FROM announcements ORDER BY date DESC').fetchall()
-    user_data     = conn.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+    user_data = conn.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+    sitins = conn.execute(
+        'SELECT * FROM sitin WHERE id_number = ? ORDER BY date DESC LIMIT 5',
+        (session.get('id_number'),)
+    ).fetchall()
+    mini_leaderboard = conn.execute('''
+        SELECT id_number, firstname, lastname, points
+        FROM users WHERE points > 0 ORDER BY points DESC LIMIT 5
+    ''').fetchall()
+    rank_row = conn.execute('''
+        SELECT COUNT(*) + 1 as rank FROM users WHERE points > (SELECT points FROM users WHERE id_number = ?)
+    ''', (session.get('id_number'),)).fetchone()
+    rank = rank_row['rank'] if rank_row else 0
     conn.close()
-    return render_template('student_dashboard.html', user=user_data, announcements=announcements)
+    return render_template('student_dashboard.html', user=user_data, announcements=announcements,
+                           sitins=sitins, mini_leaderboard=mini_leaderboard, rank=rank)
 
 # ─── STUDENT EDIT PROFILE ──────────────────────────────────────────
 @app.route('/student/edit_profile', methods=['GET', 'POST'])
@@ -457,48 +481,35 @@ def student_testimonials():
     return render_template('student_testimonials.html', user=session,
         testimonials=testimonials, my_testimonial=my_testimonial)
 
-# ─── STUDENT SUMMARY (UPDATED STATS) ────────────────────────────────
+# ─── STUDENT SUMMARY ───────────────────────────────────────────────
 @app.route('/student/summary')
 @login_required
 def student_summary():
-    conn = get_db()
+    conn      = get_db()
     id_number = session.get('id_number')
-    sitins = conn.execute('SELECT * FROM sitin WHERE id_number = ? ORDER BY date DESC', (id_number,)).fetchall()
-    software = conn.execute('SELECT * FROM software ORDER BY lab').fetchall()
+    sitins    = conn.execute(
+        'SELECT * FROM sitin WHERE id_number = ? ORDER BY date DESC',
+        (id_number,)
+    ).fetchall()
+    software  = conn.execute('SELECT * FROM software ORDER BY lab').fetchall()
     lab_settings = conn.execute('SELECT * FROM lab_settings').fetchall()
     user_data = conn.execute('SELECT * FROM users WHERE id_number = ?', (id_number,)).fetchone()
     conn.close()
 
-    total_seconds = 0
-    session_durations = []
-    number_of_sessions = len(sitins)
+    total_sessions = len(sitins)
+    purpose_counts = {}
     for s in sitins:
-        if s['time_in'] and s['time_out']:
-            try:
-                time_in = datetime.strptime(s['time_in'], '%Y-%m-%d %H:%M:%S')
-                time_out = datetime.strptime(s['time_out'], '%Y-%m-%d %H:%M:%S')
-                duration = (time_out - time_in).total_seconds()
-                if duration > 0:
-                    total_seconds += duration
-                    session_durations.append(duration)
-            except:
-                pass
-    total_hours = round(total_seconds / 3600, 1)
-    if number_of_sessions > 0 and session_durations:
-        avg_seconds = sum(session_durations) / len(session_durations)
-        avg_hours = round(avg_seconds / 3600, 1)
-        longest_seconds = max(session_durations)
-        longest_hours_int = int(longest_seconds // 3600)
-        longest_minutes = int((longest_seconds % 3600) // 60)
-        longest_formatted = f"{longest_hours_int}h {longest_minutes}m"
+        purpose = s['purpose']
+        purpose_counts[purpose] = purpose_counts.get(purpose, 0) + 1
+    if purpose_counts:
+        most_used_purpose = max(purpose_counts, key=purpose_counts.get)
     else:
-        avg_hours = 0
-        longest_formatted = "0h 0m"
+        most_used_purpose = '—'
+    
     return render_template('student_summary.html', user=user_data,
-                           number_of_sessions=number_of_sessions,
-                           total_hours=total_hours, avg_hours=avg_hours,
-                           longest_session=longest_formatted,
-                           software=software, lab_settings=lab_settings)
+        sitins=sitins, total_sessions=total_sessions,
+        most_used_purpose=most_used_purpose,
+        software=software, lab_settings=lab_settings)
 
 # ─── STUDENT SESSIONS ──────────────────────────────────────────────
 @app.route('/student/sessions')
@@ -548,26 +559,32 @@ def get_notifications():
     conn.close()
     return jsonify([{'id': a['id'], 'content': a['content'], 'date': a['date'][:10]} for a in announcements])
 
-# ─── ADMIN DASHBOARD ───────────────────────────────────────────────
+# ─── ADMIN DASHBOARD (with new stats) ──────────────────────────────
 @app.route('/admin')
 @admin_required
 def admin_dashboard():
-    conn            = get_db()
-    total_students  = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+    conn = get_db()
+    total_students = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
     currently_sitin = conn.execute("SELECT COUNT(*) FROM sitin WHERE status='Active'").fetchone()[0]
-    total_sitin     = conn.execute('SELECT COUNT(*) FROM sitin').fetchone()[0]
-    announcements   = conn.execute('SELECT * FROM announcements ORDER BY date DESC').fetchall()
-    purposes        = conn.execute("SELECT purpose, COUNT(*) as count FROM sitin GROUP BY purpose").fetchall()
+    total_sitin = conn.execute('SELECT COUNT(*) FROM sitin').fetchone()[0]
+    announcements = conn.execute('SELECT * FROM announcements ORDER BY date DESC').fetchall()
+    purposes = conn.execute("SELECT purpose, COUNT(*) as count FROM sitin GROUP BY purpose").fetchall()
+    total_points_given = conn.execute('SELECT COALESCE(SUM(points), 0) FROM point_logs WHERE action = "add"').fetchone()[0]
+    total_converted = conn.execute('SELECT COALESCE(SUM(points), 0) FROM point_logs WHERE action = "convert"').fetchone()[0]
+    top_student = conn.execute('SELECT firstname, lastname, points FROM users ORDER BY points DESC LIMIT 1').fetchone()
+    total_sessions_completed = conn.execute('SELECT COUNT(*) FROM sitin WHERE status = "Done"').fetchone()[0]
     conn.close()
     return render_template('admin_dashboard.html',
         total_students=total_students, currently_sitin=currently_sitin,
-        total_sitin=total_sitin, announcements=announcements, purposes=purposes)
+        total_sitin=total_sitin, announcements=announcements, purposes=purposes,
+        total_points_given=total_points_given, total_converted=total_converted,
+        top_student=top_student, total_sessions_completed=total_sessions_completed)
 
 # ─── ADMIN STATS API ───────────────────────────────────────────────
 @app.route('/admin/stats')
 @admin_required
 def admin_stats():
-    conn            = get_db()
+    conn = get_db()
     total_students  = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
     currently_sitin = conn.execute("SELECT COUNT(*) FROM sitin WHERE status='Active'").fetchone()[0]
     total_sitin     = conn.execute('SELECT COUNT(*) FROM sitin').fetchone()[0]
@@ -585,7 +602,7 @@ def admin_stats():
 @app.route('/admin/students')
 @admin_required
 def admin_students():
-    conn     = get_db()
+    conn = get_db()
     students = conn.execute('SELECT * FROM users ORDER BY lastname').fetchall()
     conn.close()
     return render_template('admin_students.html', students=students)
@@ -702,13 +719,24 @@ def add_sitin():
     conn.close()
     return redirect(url_for('admin_sitin'))
 
+# ─── AWARD POINTS ON LOGOUT (modified) ────────────────────────────
 @app.route('/admin/sitin/logout/<int:sitin_id>')
 @admin_required
 def sitin_logout(sitin_id):
     conn = get_db()
-    conn.execute("UPDATE sitin SET status='Done', time_out=? WHERE id=?",
-                 (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sitin_id))
-    conn.commit()
+    sitin = conn.execute('SELECT * FROM sitin WHERE id = ?', (sitin_id,)).fetchone()
+    if sitin:
+        conn.execute("UPDATE sitin SET status='Done', time_out=? WHERE id=?",
+                     (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), sitin_id))
+        # Award points (10 per completed session)
+        points_awarded = 10
+        student = conn.execute('SELECT points FROM users WHERE id_number = ?', (sitin['id_number'],)).fetchone()
+        if student:
+            new_points = student['points'] + points_awarded
+            conn.execute('UPDATE users SET points = ? WHERE id_number = ?', (new_points, sitin['id_number']))
+            conn.execute('INSERT INTO point_logs (student_id, points, action, remarks) VALUES (?, ?, ?, ?)',
+                         (sitin['id_number'], points_awarded, 'add', 'Auto reward for completing sit-in session'))
+        conn.commit()
     conn.close()
     return redirect(url_for('admin_sitin'))
 
@@ -754,7 +782,6 @@ def delete_report(sitin_id):
     conn.close()
     return redirect(url_for('admin_reports'))
 
-# ─── EXPORT CSV (original, kept for compatibility) ─────────────────
 @app.route('/admin/reports/export/csv')
 @admin_required
 def export_csv():
@@ -814,7 +841,6 @@ def admin_generate_reports():
                            from_date=from_date, to_date=to_date,
                            selected_lab=lab, status=status)
 
-# ─── EXPORT CSV FILTERED (used by generate reports) ────────────────
 @app.route('/admin/reports/export/csv_filtered')
 @admin_required
 def export_csv_filtered():
@@ -1081,6 +1107,87 @@ def get_student(id_number):
             'remaining_session': remaining
         })
     return jsonify({'found': False})
+
+# ─── LEADERBOARD API ───────────────────────────────────────────────
+@app.route('/api/leaderboard')
+def api_leaderboard():
+    conn = get_db()
+    leaderboard = conn.execute('''
+        SELECT id_number, firstname, lastname, course,
+               (SELECT COUNT(*) FROM sitin WHERE sitin.id_number = users.id_number AND status = 'Done') as total_sessions,
+               points,
+               RANK() OVER (ORDER BY points DESC) as rank
+        FROM users
+        WHERE points > 0 OR (SELECT COUNT(*) FROM sitin WHERE sitin.id_number = users.id_number) > 0
+        ORDER BY points DESC
+        LIMIT 100
+    ''').fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in leaderboard])
+
+# ─── ADMIN REWARDS MANAGEMENT ──────────────────────────────────────
+@app.route('/admin/rewards')
+@admin_required
+def admin_rewards():
+    conn = get_db()
+    students = conn.execute('SELECT id_number, firstname, lastname, course, points, converted_sessions FROM users ORDER BY points DESC').fetchall()
+    point_logs = conn.execute('''
+        SELECT l.*, u.firstname, u.lastname
+        FROM point_logs l JOIN users u ON l.student_id = u.id_number
+        ORDER BY l.date_created DESC LIMIT 50
+    ''').fetchall()
+    conn.close()
+    return render_template('admin_rewards.html', students=students, point_logs=point_logs)
+
+@app.route('/admin/adjust_points', methods=['POST'])
+@admin_required
+def adjust_points():
+    student_id = request.form.get('student_id')
+    points = request.form.get('points', type=int)
+    action = request.form.get('action')
+    remarks = request.form.get('remarks', '')
+    if not student_id or not points or points <= 0:
+        return jsonify({'error': 'Invalid input'}), 400
+    conn = get_db()
+    student = conn.execute('SELECT points FROM users WHERE id_number = ?', (student_id,)).fetchone()
+    if not student:
+        conn.close()
+        return jsonify({'error': 'Student not found'}), 404
+    new_points = student['points'] + points if action == 'add' else student['points'] - points
+    if new_points < 0:
+        conn.close()
+        return jsonify({'error': 'Points cannot be negative'}), 400
+    conn.execute('UPDATE users SET points = ? WHERE id_number = ?', (new_points, student_id))
+    conn.execute('INSERT INTO point_logs (student_id, points, action, remarks) VALUES (?, ?, ?, ?)',
+                 (student_id, points if action == 'add' else -points, action, remarks))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'new_points': new_points})
+
+# ─── STUDENT CONVERT POINTS ────────────────────────────────────────
+@app.route('/student/convert_points', methods=['POST'])
+@login_required
+def convert_points():
+    points_to_convert = request.form.get('points', type=int)
+    CONVERSION_RATE = 100
+    if not points_to_convert or points_to_convert < CONVERSION_RATE:
+        return jsonify({'error': f'Minimum {CONVERSION_RATE} points required.'}), 400
+    conn = get_db()
+    id_number = session.get('id_number')
+    user = conn.execute('SELECT points, remaining_session FROM users WHERE id_number = ?', (id_number,)).fetchone()
+    if not user or user['points'] < points_to_convert:
+        conn.close()
+        return jsonify({'error': 'Insufficient points.'}), 400
+    sessions_gained = points_to_convert // CONVERSION_RATE
+    new_points = user['points'] - points_to_convert
+    new_sessions = user['remaining_session'] + sessions_gained
+    conn.execute('UPDATE users SET points = ?, remaining_session = ?, converted_sessions = converted_sessions + ? WHERE id_number = ?',
+                 (new_points, new_sessions, sessions_gained, id_number))
+    conn.execute('INSERT INTO point_logs (student_id, points, action, remarks) VALUES (?, ?, ?, ?)',
+                 (id_number, -points_to_convert, 'convert', f'Converted {points_to_convert} points to {sessions_gained} session(s)'))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'new_points': new_points, 'new_sessions': new_sessions, 'sessions_gained': sessions_gained})
 
 # ─── LOGOUT ────────────────────────────────────────────────────────
 @app.route('/logout')

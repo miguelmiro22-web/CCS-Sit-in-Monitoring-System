@@ -6,27 +6,30 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* Navbar overflow fix – keeps navbar clean on all pages */
-    .admin-navbar {
-      flex-wrap: wrap;
-      padding: 8px 20px;
+    .admin-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
     }
-    .admin-links {
+    .stats-row {
       display: flex;
+      gap: 15px;
       flex-wrap: wrap;
-      align-items: center;
-      gap: 4px;
-      margin: 0;
-      padding: 0;
+      margin-bottom: 20px;
     }
-    .admin-links li a {
-      padding: 6px 8px;
-      font-size: 13px;
+    .stat-mini-card {
+      background: rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 15px;
+      flex: 1;
+      text-align: center;
+      backdrop-filter: blur(10px);
     }
-    .admin-links li:last-child {
-      margin-left: auto;
+    .stat-mini-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #a0b4ff;
     }
-    /* Original chart & notification styles (unchanged) */
     .chart-container {
       position: relative;
       min-height: 360px;
@@ -60,26 +63,56 @@
     .mark-read-btn:hover {
       background: rgba(160,180,255,0.4);
     }
+    /* Ensure dropdown menus work and navbar doesn't overflow */
+    .admin-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+    }
+    .admin-links li a {
+      padding: 6px 10px;
+    }
+    .dropdown-menu-right {
+      min-width: 180px;
+    }
   </style>
 </head>
 <body>
   <nav class="admin-navbar">
     <div class="admin-brand">College of Computer Studies Admin</div>
     <ul class="admin-links">
-      <li><a href="/admin" {% if request.endpoint == 'admin_dashboard' %}class="active"{% endif %}>Home</a></li>
+      <li><a href="/admin" class="active">Home</a></li>
       <li><a href="#" onclick="openSearch()">Search</a></li>
-      <li><a href="/admin/students" {% if request.endpoint == 'admin_students' %}class="active"{% endif %}>Students</a></li>
-      <li><a href="/admin/sitin" {% if request.endpoint == 'admin_sitin' %}class="active"{% endif %}>Sit-in</a></li>
-      <li><a href="/admin/records" {% if request.endpoint == 'admin_records' %}class="active"{% endif %}>View Sit-in Records</a></li>
-      <li><a href="/admin/reports" {% if request.endpoint == 'admin_reports' %}class="active"{% endif %}>Sit-in Reports</a></li>
-      <li><a href="/admin/generate_reports" {% if request.endpoint == 'admin_generate_reports' %}class="active"{% endif %}>Generate Reports</a></li>
-      <li><a href="/admin/feedback" {% if request.endpoint == 'admin_feedback' %}class="active"{% endif %}>Feedback Reports</a></li>
-      <li><a href="/admin/testimonials" {% if request.endpoint == 'admin_testimonials' %}class="active"{% endif %}>Student Testimonials</a></li>
-      <li><a href="/admin/reservation" {% if request.endpoint == 'admin_reservation' %}class="active"{% endif %}>Reservation</a></li>
-      <li><a href="/admin/lab_settings" {% if request.endpoint == 'admin_lab_settings' %}class="active"{% endif %}>Lab Settings</a></li>
-      <li><a href="/admin/analytics" {% if request.endpoint == 'admin_analytics' %}class="active"{% endif %}>Analytics</a></li>
+      <li><a href="/admin/students">Students</a></li>
+
+      <!-- Sit‑in dropdown -->
+      <li class="has-dropdown-right">
+        <a href="#">Sit‑in</a>
+        <ul class="dropdown-menu-right">
+          <li><a href="/admin/sitin">Current Sit‑in</a></li>
+          <li><a href="/admin/records">Sit‑in Records</a></li>
+          <li><a href="/admin/reports">Sit‑in Reports</a></li>
+        </ul>
+      </li>
+
+      <!-- Reports dropdown -->
+      <li class="has-dropdown-right">
+        <a href="#">Reports</a>
+        <ul class="dropdown-menu-right">
+          <li><a href="/admin/generate_reports">Generate Reports</a></li>
+          <li><a href="/admin/feedback">Feedback Reports</a></li>
+          <li><a href="/admin/testimonials">Student Testimonials</a></li>
+        </ul>
+      </li>
+
+      <li><a href="/admin/reservation">Reservation</a></li>
+      <li><a href="/admin/lab_settings">Lab Settings</a></li>
+      <li><a href="/admin/analytics">Analytics</a></li>
+      <li><a href="/admin/rewards">Rewards</a></li>
       <li><a href="#" id="darkModeToggle">🌓 Dark/Light</a></li>
-      <!-- Notification Bell (unchanged) -->
+
+      <!-- Notification Bell -->
       <li class="has-dropdown-right">
         <a href="#" id="adminNotifBell" onclick="toggleAdminNotif(event)">
           🔔 <span id="adminNotifBadge" style="background:#e74c3c; color:white; font-size:10px; border-radius:10px; padding:2px 6px; margin-left:4px; display:none;">0</span>
@@ -92,19 +125,41 @@
           <div id="adminNotifList"><li style="padding:10px 16px;"><span style="color:rgba(255,255,255,0.5);">No new notifications</span></li></div>
         </ul>
       </li>
+
       <li><a href="/logout" class="logout-btn">Log out</a></li>
     </ul>
   </nav>
 
+  <!-- The rest of your dashboard content remains unchanged -->
   <div class="admin-body">
+    <!-- Stats row (points system) -->
+    <div class="stats-row">
+      <div class="stat-mini-card">
+        <div class="stat-mini-value">{{ total_sessions_completed }}</div>
+        <div>Completed Sit-in Sessions</div>
+      </div>
+      <div class="stat-mini-card">
+        <div class="stat-mini-value">{{ total_points_given }}</div>
+        <div>Total Reward Points Given</div>
+      </div>
+      <div class="stat-mini-card">
+        <div class="stat-mini-value">{{ total_converted }}</div>
+        <div>Total Points Converted</div>
+      </div>
+      <div class="stat-mini-card">
+        <div class="stat-mini-value">{{ top_student.firstname }} {{ top_student.lastname }}</div>
+        <div>Top Student ({{ top_student.points }} pts)</div>
+      </div>
+    </div>
+
     <div class="admin-grid">
       <!-- Statistics Card -->
       <div class="admin-card">
         <div class="card-header">📊 Statistics</div>
         <div class="card-body">
-          <div class="stat-item"><span class="stat-label">Total Students:</span><span class="stat-value" id="totalStudents">0</span></div>
-          <div class="stat-item"><span class="stat-label">Currently Sit-in:</span><span class="stat-value" id="currentlySitin">0</span></div>
-          <div class="stat-item"><span class="stat-label">Total Sit-in Count:</span><span class="stat-value" id="totalSitin">0</span></div>
+          <div class="stat-item"><span class="stat-label">Total Students:</span><span class="stat-value">{{ total_students }}</span></div>
+          <div class="stat-item"><span class="stat-label">Currently Sit-in:</span><span class="stat-value">{{ currently_sitin }}</span></div>
+          <div class="stat-item"><span class="stat-label">Total Sit-in Count:</span><span class="stat-value">{{ total_sitin }}</span></div>
         </div>
       </div>
       <!-- Purpose Distribution Pie Chart -->
@@ -128,16 +183,16 @@
         </form>
         <div id="announcementsList">
           {% for a in announcements %}
-          <div class="announcement-item"><p class="ann-meta">{{ a.date[:16] }}</p><p class="ann-content">{{ a.content }}</p></div>
+            <div class="announcement-item"><p class="ann-meta">{{ a.date[:16] }}</p><p class="ann-content">{{ a.content }}</p></div>
           {% else %}
-          <p style="color:#aaa;">No announcements yet.</p>
+            <p style="color:#aaa;">No announcements yet.</p>
           {% endfor %}
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Search Modal -->
+  <!-- Search Modal (unchanged) -->
   <div id="searchModal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <div class="modal-header"><span>Search Student</span><span onclick="closeSearch()" style="cursor:pointer;">✕</span></div>
@@ -149,78 +204,162 @@
   </div>
 
   <script>
-    let pieChart = null;
-    const canvas = document.getElementById('purposePieChart');
-
     function openSearch() { document.getElementById('searchModal').style.display = 'flex'; }
-    function closeSearch(){ document.getElementById('searchModal').style.display = 'none'; }
+    function closeSearch() { document.getElementById('searchModal').style.display = 'none'; }
 
-    const colorPalette = {
-      'Programming': '#4a6cf7', 'Research': '#7c3aed', 'Printing': '#f97316', 'Others': '#06b6d4',
-      'C#': '#3b82f6', 'Java': '#8b5cf6', 'Python': '#a855f7', 'Database': '#14b8a6',
-      'PHP': '#eab308', 'ASP.Net': '#ef4444', 'C': '#10b981'
-    };
-    const defaultColors = ['#4a6cf7', '#7c3aed', '#f97316', '#06b6d4', '#3b82f6', '#8b5cf6', '#a855f7', '#14b8a6'];
+    // Fetch purpose data and create pie chart
+    fetch('/admin/stats')
+      .then(response => response.json())
+      .then(data => {
+        const labels = data.labels;
+        const values = data.chart_data;
+        const hasData = labels.length > 0 && values.some(v => v > 0);
 
-    const centerTextPlugin = {
-      id: 'centerText',
-      afterDraw(chart) {
-        if (chart.config.options.plugins?.centerText?.display) {
-          const { ctx, chartArea: { width, height } } = chart;
-          ctx.save();
+        const canvas = document.getElementById('purposePieChart');
+        if (!hasData) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.font = '14px "Segoe UI", Arial';
-          ctx.fillStyle = document.body.classList.contains('dark-mode') ? '#aaa' : '#666';
+          ctx.fillStyle = '#aaa';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('No data available', width / 2, height / 2);
-          ctx.restore();
+          ctx.fillText('No data available', canvas.width / 2, canvas.height / 2);
+          return;
         }
-      }
-    };
-    Chart.register(centerTextPlugin);
 
-    function loadDashboardData() {
-      fetch('/admin/stats')
+        const colorPalette = [
+          '#4a6cf7', '#7c3aed', '#f97316', '#06b6d4', '#3b82f6',
+          '#8b5cf6', '#a855f7', '#14b8a6', '#eab308', '#ef4444'
+        ];
+        const backgroundColors = labels.map((_, idx) => colorPalette[idx % colorPalette.length]);
+
+        new Chart(canvas, {
+          type: 'pie',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: values,
+              backgroundColor: backgroundColors,
+              borderColor: 'rgba(255,255,255,0.2)',
+              borderWidth: 2,
+              hoverOffset: 10
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  color: document.body.classList.contains('dark-mode') ? '#f0f0f0' : '#1f2937',
+                  font: { size: 12, weight: '500' },
+                  usePointStyle: true,
+                  boxWidth: 10
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    const label = context.label || '';
+                    const value = context.raw || 0;
+                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
+                    return `${label}: ${value} (${percentage}%)`;
+                  }
+                },
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                titleColor: '#fff',
+                bodyColor: '#ddd',
+                borderColor: '#4a6cf7',
+                borderWidth: 1
+              }
+            },
+            animation: { animateRotate: true, duration: 800 }
+          }
+        });
+      })
+      .catch(err => console.error('Error loading stats:', err));
+
+    // Admin Notifications (unchanged)
+    let adminNotifOpen = false;
+    function toggleAdminNotif(e) {
+      e.preventDefault();
+      const dd = document.getElementById('adminNotifDropdown');
+      adminNotifOpen = !adminNotifOpen;
+      dd.style.display = adminNotifOpen ? 'block' : 'none';
+      if (adminNotifOpen) loadAdminNotifications();
+    }
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.has-dropdown-right')) {
+        const dd = document.getElementById('adminNotifDropdown');
+        if (dd) dd.style.display = 'none';
+        adminNotifOpen = false;
+      }
+    });
+    function loadAdminNotifications() {
+      fetch('/admin/notifications/list')
         .then(r => r.json())
         .then(data => {
-          document.getElementById('totalStudents').innerText = data.total_students;
-          document.getElementById('currentlySitin').innerText = data.currently_sitin;
-          document.getElementById('totalSitin').innerText = data.total_sitin;
-          const hasRealData = data.labels.length > 0 && data.chart_data.some(v => v > 0);
-          if (!hasRealData) {
-            if (pieChart) pieChart.destroy();
-            pieChart = new Chart(canvas, {
-              type: 'pie',
-              data: { labels: [' '], datasets: [{ data: [1], backgroundColor: ['rgba(100,100,100,0.3)'], borderWidth: 0 }] },
-              options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { enabled: false }, centerText: { display: true } }, events: [] }
-            });
+          const container = document.getElementById('adminNotifList');
+          if (!container) return;
+          if (data.length === 0) {
+            container.innerHTML = '<li style="padding:10px 16px;"><span style="color:rgba(255,255,255,0.5);">No notifications</span></li>';
             return;
           }
-          const bgColors = data.labels.map((l,i) => colorPalette[l] || defaultColors[i%defaultColors.length]);
-          if (pieChart) pieChart.destroy();
-          pieChart = new Chart(canvas, {
-            type: 'pie',
-            data: { labels: data.labels, datasets: [{ data: data.chart_data, backgroundColor: bgColors, borderColor: 'rgba(255,255,255,0.2)', borderWidth: 2, hoverOffset: 10 }] },
-            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { color: document.body.classList.contains('dark-mode') ? '#f0f0f0' : '#1f2937', font: { size: 12, weight: '500' }, usePointStyle: true, boxWidth: 10 } }, tooltip: { callbacks: { label: (ctx) => { const label = ctx.label || ''; const val = ctx.raw || 0; const total = ctx.dataset.data.reduce((a,b)=>a+b,0); const pct = total ? ((val/total)*100).toFixed(1) : 0; return `${label}: ${val} (${pct}%)`; } } }, centerText: { display: false } }, animation: { animateRotate: true, duration: 800 } }
+          let html = '';
+          data.forEach(n => {
+            const unreadClass = n.is_read === 0 ? 'notification-item-unread' : 'notification-item-read';
+            html += `<div class="${unreadClass}" style="padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.06);">
+              <div style="font-size:11px; color:#6b7db3;">${n.created_at.slice(0,16)}</div>
+              <div style="font-size:12px;">${n.message}</div>
+              ${n.is_read === 0 ? `<button class="mark-read-btn" onclick="markAdminNotifRead(${n.id})">Mark read</button>` : ''}
+            </div>`;
           });
-        })
-        .catch(err => console.error(err));
+          container.innerHTML = html;
+        });
     }
+    function markAdminNotifRead(id) {
+      fetch(`/admin/notifications/mark_read/${id}`, { method: 'POST' })
+        .then(() => { updateAdminNotifCount(); if (adminNotifOpen) loadAdminNotifications(); });
+    }
+    function markAllAdminNotifs() {
+      fetch('/admin/notifications/mark_all_read', { method: 'POST' })
+        .then(() => { updateAdminNotifCount(); if (adminNotifOpen) loadAdminNotifications(); });
+    }
+    function updateAdminNotifCount() {
+      fetch('/admin/notifications/count')
+        .then(r => r.json())
+        .then(data => {
+          const badge = document.getElementById('adminNotifBadge');
+          if (badge) {
+            if (data.count > 0) {
+              badge.style.display = 'inline';
+              badge.textContent = data.count;
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        });
+    }
+    updateAdminNotifCount();
+    setInterval(updateAdminNotifCount, 30000);
 
-    // Admin Notifications
-    let adminNotifOpen = false;
-    function toggleAdminNotif(e) { e.preventDefault(); const dd=document.getElementById('adminNotifDropdown'); adminNotifOpen=!adminNotifOpen; dd.style.display=adminNotifOpen?'block':'none'; if(adminNotifOpen) loadAdminNotifications(); }
-    document.addEventListener('click',function(e){ if(!e.target.closest('.has-dropdown-right')){ const dd=document.getElementById('adminNotifDropdown'); if(dd) dd.style.display='none'; adminNotifOpen=false; } });
-    function loadAdminNotifications() { fetch('/admin/notifications/list').then(r=>r.json()).then(data=>{ const c=document.getElementById('adminNotifList'); if(!c) return; if(data.length===0){ c.innerHTML='<li style="padding:10px 16px;"><span style="color:rgba(255,255,255,0.5);">No notifications</span></li>'; return; } let html=''; data.forEach(n=>{ const unreadClass=n.is_read===0?'notification-item-unread':'notification-item-read'; html+=`<div class="${unreadClass}" style="padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.06);"><div style="font-size:11px; color:#6b7db3;">${n.created_at.slice(0,16)}</div><div style="font-size:12px;">${n.message}</div>${n.is_read===0?`<button class="mark-read-btn" onclick="markAdminNotifRead(${n.id})">Mark read</button>`:''}</div>`; }); c.innerHTML=html; }); }
-    function markAdminNotifRead(id){ fetch(`/admin/notifications/mark_read/${id}`,{method:'POST'}).then(()=>{ updateAdminNotifCount(); if(adminNotifOpen) loadAdminNotifications(); }); }
-    function markAllAdminNotifs(){ fetch('/admin/notifications/mark_all_read',{method:'POST'}).then(()=>{ updateAdminNotifCount(); if(adminNotifOpen) loadAdminNotifications(); }); }
-    function updateAdminNotifCount(){ fetch('/admin/notifications/count').then(r=>r.json()).then(data=>{ const badge=document.getElementById('adminNotifBadge'); if(badge){ if(data.count>0){ badge.style.display='inline'; badge.textContent=data.count; } else badge.style.display='none'; } }); }
-    updateAdminNotifCount(); setInterval(updateAdminNotifCount,30000);
-
-    function initDarkMode() { const isDark = localStorage.getItem('darkMode')==='true'; if(isDark) document.body.classList.add('dark-mode'); const toggle=document.getElementById('darkModeToggle'); if(toggle) toggle.addEventListener('click',(e)=>{ e.preventDefault(); document.body.classList.toggle('dark-mode'); localStorage.setItem('darkMode',document.body.classList.contains('dark-mode')); loadDashboardData(); }); }
+    // Dark mode
+    function initDarkMode() {
+      const isDark = localStorage.getItem('darkMode') === 'true';
+      if (isDark) document.body.classList.add('dark-mode');
+      const toggle = document.getElementById('darkModeToggle');
+      if (toggle) {
+        toggle.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.body.classList.toggle('dark-mode');
+          localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+          location.reload(); // Refresh chart colors
+        });
+      }
+    }
     initDarkMode();
-    loadDashboardData();
-    setInterval(loadDashboardData,30000);
   </script>
 </body>
 </html>

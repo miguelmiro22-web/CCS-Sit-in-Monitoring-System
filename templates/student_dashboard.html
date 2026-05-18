@@ -2,25 +2,189 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>CCS | Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CCS | Student Dashboard</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
+    .dash-body {
+      display: grid;
+      grid-template-columns: 220px 1fr 240px;
+      gap: 14px;
+      padding: 14px;
+      min-height: calc(100vh - 95px);
+      background-image: url('/static/ucbuildings.png');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      position: relative;
+    }
+    .dash-body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: rgba(5,10,40,0.88);
+      z-index: 0;
+      pointer-events: none;
+    }
+    .dash-body > * { position: relative; z-index: 1; }
+
+    /* LEFT COLUMN */
+    .info-card {
+      background: rgba(13,21,64,0.95);
+      border: 0.5px solid rgba(100,140,255,0.2);
+      border-radius: 12px;
+      padding: 16px;
+      color: white;
+      height: fit-content;
+    }
+    .student-avatar {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: #1a2a7a;
+      margin: 0 auto 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 600; color: #a0b4ff;
+      border: 2px solid rgba(160,180,255,0.3);
+      overflow: hidden;
+    }
+    .stu-name {
+      text-align: center; font-size: 14px; font-weight: 600;
+      color: white; margin-bottom: 2px;
+    }
+    .stu-id {
+      text-align: center; font-size: 11px;
+      color: rgba(255,255,255,0.35); margin-bottom: 10px;
+    }
+    .sec-divider {
+      height: 0.5px; background: rgba(255,255,255,0.08); margin: 10px 0 8px;
+    }
+    .sec-title {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px;
+      color: rgba(255,255,255,0.3); font-weight: 600; margin-bottom: 8px;
+    }
+    .info-item {
+      display: flex; align-items: flex-start; gap: 7px;
+      font-size: 11px; color: rgba(255,255,255,0.7);
+      margin-bottom: 6px;
+    }
+    .info-item .info-icon { color: #a0b4ff; font-size: 13px; flex-shrink: 0; }
+    .stat-row {
+      background: rgba(5,10,40,0.6);
+      border-radius: 7px; padding: 7px 10px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 5px;
+      border: 0.5px solid rgba(100,140,255,0.1);
+    }
+    .stat-row-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.35); }
+    .stat-row-val { font-size: 15px; font-weight: 600; }
+    .val-blue { color: #a0b4ff; }
+    .val-gold { color: #f0c040; }
+    .val-teal { color: #5DCAA5; }
+    .convert-btn {
+      width: 100%; padding: 8px; margin-top: 6px;
+      background: linear-gradient(135deg, #4a6cf7, #7c3aed);
+      border: none; border-radius: 8px; color: white;
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      letter-spacing: 0.3px; transition: all 0.2s;
+    }
+    .convert-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(74,108,247,0.4); }
+
+    /* MIDDLE COLUMN */
+    .middle-col { display: flex; flex-direction: column; gap: 12px; }
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    }
+    .stats-mini {
+      background: rgba(13,21,64,0.95);
+      border: 0.5px solid rgba(100,140,255,0.15);
+      border-radius: 10px; padding: 12px 10px; text-align: center;
+    }
+    .stats-mini-val { font-size: 22px; font-weight: 600; color: #a0b4ff; }
+    .stats-mini-val.gold { color: #f0c040; }
+    .stats-mini-val.teal { color: #5DCAA5; }
+    .stats-mini-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.35); margin-top: 3px; }
+
+    .db-card {
+      background: rgba(13,21,64,0.95);
+      border: 0.5px solid rgba(100,140,255,0.15);
+      border-radius: 12px; overflow: hidden;
+    }
+    .db-card-header {
+      background: linear-gradient(135deg, #1a2a7a, #2a1a5a);
+      color: #a0b4ff; font-size: 11px; font-weight: 600;
+      padding: 9px 14px; text-transform: uppercase; letter-spacing: 0.7px;
+    }
+    .db-card-body { padding: 12px 14px; }
+
+    .ann-item { padding: 10px 0; border-bottom: 0.5px solid rgba(255,255,255,0.06); }
+    .ann-item:last-child { border-bottom: none; }
+    .ann-meta { font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 600; margin-bottom: 3px; }
+    .ann-content { font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+
+    .history-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .history-table th {
+      background: rgba(5,10,40,0.6); color: rgba(255,255,255,0.35);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 7px 10px; text-align: left; font-weight: 600;
+    }
+    .history-table td { padding: 8px 10px; border-bottom: 0.5px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.65); }
+    .history-table tr:last-child td { border-bottom: none; }
+    .badge-done { background: rgba(93,202,165,0.15); color: #5DCAA5; padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 600; }
+    .badge-active { background: rgba(74,108,247,0.2); color: #a0b4ff; padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 600; }
+
+    .lb-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 0; border-bottom: 0.5px solid rgba(255,255,255,0.06);
+      font-size: 12px; color: rgba(255,255,255,0.7);
+    }
+    .lb-row:last-child { border-bottom: none; }
+    .lb-rank { color: #f0c040; font-weight: 700; margin-right: 7px; font-size: 11px; }
+    .lb-pts { background: rgba(160,180,255,0.12); color: #a0b4ff; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+
+    /* RIGHT COLUMN */
+    .rules-card {
+      background: rgba(13,21,64,0.95);
+      border: 0.5px solid rgba(100,140,255,0.15);
+      border-radius: 12px; overflow: hidden; height: fit-content;
+    }
+    .rules-body {
+      padding: 12px 14px; font-size: 11px;
+      color: rgba(255,255,255,0.6); line-height: 1.7;
+      max-height: calc(100vh - 130px); overflow-y: auto;
+    }
+    .rules-body h3 { font-size: 11px; font-weight: 600; color: #a0b4ff; text-align: center; margin-bottom: 2px; }
+    .rules-body ol { padding-left: 14px; margin-top: 10px; }
+    .rules-body li { margin-bottom: 8px; }
+
+    /* Notification styles */
     .notification-item-unread { background: rgba(160,180,255,0.1); border-left: 3px solid #a0b4ff; }
     .notification-item-read { opacity: 0.7; }
     .mark-read-btn { float: right; font-size: 10px; padding: 2px 8px; background: rgba(160,180,255,0.2); border: none; border-radius: 4px; color: white; cursor: pointer; margin-top: -15px; }
     .mark-read-btn:hover { background: rgba(160,180,255,0.4); }
-    .notification-item { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: background 0.2s; }
+    .notification-item { padding: 10px 16px; border-bottom: 0.5px solid rgba(255,255,255,0.06); cursor: pointer; transition: background 0.2s; }
     .notification-item:hover { background: rgba(255,255,255,0.05); }
     .notification-title { font-size: 11px; color: #6b7db3; margin-bottom: 3px; font-weight: 600; }
     .notification-content { font-size: 12px; color: rgba(255,255,255,0.8); }
+    .empty-msg { text-align: center; color: rgba(255,255,255,0.3); font-size: 12px; padding: 12px 0; }
   </style>
 </head>
 <body>
+  <!-- NAVBAR -->
   <nav class="admin-navbar">
-    <div class="admin-brand">Dashboard</div>
+    <div class="admin-brand">CCS Sit-in Monitoring</div>
     <ul class="admin-links">
-      <li class="has-dropdown-right"><a href="#" onclick="toggleNotif(event)">🔔 Notification <span id="notif-badge" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px;display:none;">0</span></a>
-        <ul class="dropdown-menu-right" id="notif-dropdown" style="display:none;min-width:280px;"><li style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.08);"><span style="font-size:12px;font-weight:600;color:#a0b4ff;">Recent Announcements</span></li><div id="notif-list"><li style="padding:10px 16px;"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Loading...</span></li></div></ul>
+      <li class="has-dropdown-right">
+        <a href="#" onclick="toggleNotif(event)">
+          🔔 Notification
+          <span id="notif-badge" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px;display:none;">0</span>
+        </a>
+        <ul class="dropdown-menu-right" id="notif-dropdown" style="display:none;min-width:280px;">
+          <li style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.08);">
+            <span style="font-size:12px;font-weight:600;color:#a0b4ff;">Recent Announcements</span>
+          </li>
+          <div id="notif-list">
+            <li style="padding:10px 16px;"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Loading...</span></li>
+          </div>
+        </ul>
       </li>
       <li><a href="/student" class="active">Home</a></li>
       <li><a href="/student/summary">Summary</a></li>
@@ -34,31 +198,272 @@
       <li><a href="/logout" class="logout-btn">Log out</a></li>
     </ul>
   </nav>
+
+  <!-- DASHBOARD HEADER -->
   <div class="dash-header">Student Information</div>
+
+  <!-- BODY -->
   <div class="dash-body">
+
+    <!-- LEFT COLUMN -->
     <div class="info-card">
-      <div class="student-avatar">{% if user.photo %}<img src="{{ user.photo }}" style="width:100%;height:100%;object-fit:cover;">{% else %}{{ user.firstname[0] }}{{ user.lastname[0] }}{% endif %}</div>
-      <div class="info-item"><span class="info-icon">👤</span><span>Name: {{ user.firstname }} {{ user.middlename or '' }} {{ user.lastname }}</span></div>
-      <div class="info-item"><span class="info-icon">🎓</span><span>Course: {{ user.course }}</span></div>
-      <div class="info-item"><span class="info-icon">📅</span><span>Year: {{ user.course_level }}</span></div>
-      <div class="info-item"><span class="info-icon">✉️</span><span>Email: {{ user.email }}</span></div>
-      <div class="info-item"><span class="info-icon">🏠</span><span>Address: {{ user.address }}</span></div>
-      <div class="info-item"><span class="info-icon">⏱️</span><span>Session: {{ user.remaining_session }}</span></div>
+      <div class="student-avatar">
+        {% if user.photo %}
+          <img src="{{ user.photo }}" style="width:100%;height:100%;object-fit:cover;">
+        {% else %}
+          {{ user.firstname[0] }}{{ user.lastname[0] }}
+        {% endif %}
+      </div>
+      <div class="stu-name">{{ user.firstname }} {{ user.middlename or '' }} {{ user.lastname }}</div>
+      <div class="stu-id">ID No. {{ user.id_number }}</div>
+
+      <div class="sec-divider"></div>
+      <div class="sec-title">Academic Information</div>
+      <div class="info-item"><span class="info-icon">🎓</span><span>{{ user.course }} — Year {{ user.course_level }}</span></div>
+
+      <div class="sec-divider"></div>
+      <div class="sec-title">Contact Details</div>
+      <div class="info-item"><span class="info-icon">✉️</span><span>{{ user.email }}</span></div>
+      <div class="info-item"><span class="info-icon">🏠</span><span>{{ user.address }}</span></div>
+
+      <div class="sec-divider"></div>
+      <div class="sec-title">Session &amp; Points</div>
+      <div class="stat-row">
+        <span class="stat-row-label">Remaining Sessions</span>
+        <span class="stat-row-val val-blue">{{ user.remaining_session }}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-row-label">Reward Points</span>
+        <span class="stat-row-val val-gold">{{ user.points }}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-row-label">Converted Sessions</span>
+        <span class="stat-row-val val-blue">{{ user.converted_sessions }}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-row-label">Leaderboard Rank</span>
+        <span class="stat-row-val val-teal">#{{ rank }}</span>
+      </div>
+      <button class="convert-btn" id="convertPointsBtn">⭐ Convert 100 Points → +1 Session</button>
+      <div id="convertMsg" style="margin-top:8px;font-size:11px;text-align:center;"></div>
     </div>
-    <div class="ann-card"><div class="card-header">📢 Announcement</div><div class="card-body">{% for a in announcements %}<div class="ann-item"><p class="ann-meta">CCS Admin | {{ a.date[:10] }}</p><p class="ann-content">{{ a.content }}</p></div>{% else %}<p style="color:#6b7db3;text-align:center;">No announcements yet.</p>{% endfor %}</div></div>
-    <div class="rules-card"><div class="card-header">📋 Rules and Regulation</div><div class="rules-body"><h3>University of Cebu</h3><h3>COLLEGE OF INFORMATION & COMPUTER STUDIES</h3><h4>LABORATORY RULES AND REGULATIONS</h4><p>To avoid embarrassment and maintain camaraderie with your friends and superiors at our laboratories, please observe the following:</p><ol><li>Maintain silence, proper decorum, and discipline inside the laboratory. Mobile phones, walkmans and other personal pieces of equipment must be switched off.</li><li>Games are not allowed inside the lab. This includes computer-related games, card games and other games that may disturb the operation of the lab.</li><li>Surfing the Internet is allowed only with the permission of the instructor. Downloading and installing of software are strictly prohibited.</li><li>Getting access to other websites not related to the course is strictly prohibited.</li><li>Deleting computer files, reformatting diskettes, and other acts that will cause data loss is strictly prohibited.</li><li>Observe computer time. You are not allowed to stay beyond your allocated time.</li><li>Any vandalism or damage to lab equipment will be charged to the offending student.</li></ol></div></div>
+
+    <!-- MIDDLE COLUMN -->
+    <div class="middle-col">
+
+      <!-- Quick Stats -->
+      <div class="stats-grid">
+        {% set total_done = namespace(count=0) %}
+        {% set total_all = namespace(count=0) %}
+        {% set last_lab = namespace(val='—') %}
+        {% for s in sitins %}
+          {% set total_all.count = total_all.count + 1 %}
+          {% if s.status == 'Done' %}{% set total_done.count = total_done.count + 1 %}{% endif %}
+          {% if loop.first %}{% set last_lab.val = s.lab %}{% endif %}
+        {% endfor %}
+        <div class="stats-mini">
+          <div class="stats-mini-val">{{ total_all.count }}</div>
+          <div class="stats-mini-lbl">Total Sit-ins</div>
+        </div>
+        <div class="stats-mini">
+          <div class="stats-mini-val teal">{{ total_done.count }}</div>
+          <div class="stats-mini-lbl">Completed</div>
+        </div>
+        <div class="stats-mini">
+          <div class="stats-mini-val gold">{{ user.points }}</div>
+          <div class="stats-mini-lbl">Total Points</div>
+        </div>
+        <div class="stats-mini">
+          <div class="stats-mini-val" style="font-size:14px;">{{ last_lab.val }}</div>
+          <div class="stats-mini-lbl">Last Lab Used</div>
+        </div>
+      </div>
+
+      <!-- Announcements -->
+      <div class="db-card">
+        <div class="db-card-header">📢 Announcements</div>
+        <div class="db-card-body">
+          {% for a in announcements %}
+            <div class="ann-item">
+              <p class="ann-meta">CCS Administration &nbsp;|&nbsp; {{ a.date[:10] }}</p>
+              <p class="ann-content">{{ a.content }}</p>
+            </div>
+          {% else %}
+            <p class="empty-msg">No announcements at this time.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Recent Sit-in History -->
+      <div class="db-card">
+        <div class="db-card-header">🕒 Recent Sit-in History</div>
+        <div class="db-card-body" style="padding:0;">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Lab</th>
+                <th>Purpose</th>
+                <th>PC</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in sitins[:5] %}
+              <tr>
+                <td>{{ s.date[:10] if s.date else '—' }}</td>
+                <td>{{ s.lab }}</td>
+                <td>{{ s.purpose }}</td>
+                <td>{{ s.pc_number or '—' }}</td>
+                <td>
+                  {% if s.status == 'Done' %}
+                    <span class="badge-done">Done</span>
+                  {% else %}
+                    <span class="badge-active">Active</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="empty-msg" style="padding:14px;">No sit-in records yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Top 5 Leaderboard -->
+      <div class="db-card">
+        <div class="db-card-header">🏆 Top 5 Students by Points</div>
+        <div class="db-card-body">
+          {% for s in mini_leaderboard %}
+            <div class="lb-row">
+              <span><span class="lb-rank">#{{ loop.index }}</span>{{ s.firstname }} {{ s.lastname }}</span>
+              <span class="lb-pts">{{ s.points }} pts</span>
+            </div>
+          {% else %}
+            <p class="empty-msg">No points awarded yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="rules-card">
+      <div class="db-card-header">📋 Laboratory Rules and Regulations</div>
+      <div class="rules-body">
+        <h3>University of Cebu</h3>
+        <h3>College of Computer Studies</h3>
+        <p style="margin-top:10px;">All students are required to strictly observe the following rules and regulations inside the laboratory:</p>
+        <ol>
+          <li>Maintain silence, proper decorum, and discipline inside the laboratory. Mobile phones and other personal electronic devices must be switched off or set to silent mode.</li>
+          <li>Computer games and any non-academic activities are strictly prohibited inside the laboratory.</li>
+          <li>Internet access is permitted only with the explicit permission of the instructor. Unauthorized downloading and installation of software is strictly prohibited.</li>
+          <li>Access to websites unrelated to the current course or subject matter is not allowed.</li>
+          <li>Deleting system files, reformatting storage media, or any act that may result in data loss is strictly prohibited.</li>
+          <li>Students must observe their allotted computer time and are not permitted to stay beyond their designated schedule.</li>
+          <li>Any vandalism, misuse, or damage to laboratory equipment will be the full financial responsibility of the offending student.</li>
+        </ol>
+        <p style="margin-top:14px; font-size:10px; color:rgba(255,255,255,0.25); text-align:center;">Violations of these rules may result in disciplinary action.</p>
+      </div>
+    </div>
+
   </div>
+
   <script>
     var notifOpen = false;
-    function toggleNotif(e) { e.preventDefault(); var dropdown = document.getElementById('notif-dropdown'); notifOpen = !notifOpen; dropdown.style.display = notifOpen ? 'block' : 'none'; if (notifOpen) loadNotifications(); }
-    document.addEventListener('click', function(e) { if (!e.target.closest('.has-dropdown-right')) { var dropdown = document.getElementById('notif-dropdown'); if (dropdown) dropdown.style.display = 'none'; notifOpen = false; } });
-    function loadNotifications() { fetch('/student/notifications').then(r => r.json()).then(data => { var list = document.getElementById('notif-list'); var badge = document.getElementById('notif-badge'); if (!list) return; if (data.length === 0) { list.innerHTML = '<li style="padding:10px 16px;"><span style="font-size:12px;color:rgba(255,255,255,0.5);">No announcements yet.</span></li>'; if (badge) badge.style.display = 'none'; return; } var unreadCount = data.filter(item => item.is_read === 0).length; if (badge) badge.style.display = unreadCount > 0 ? 'inline' : 'none'; var html = ''; for (var i = 0; i < data.length; i++) { var item = data[i]; var unreadClass = (item.is_read === 0) ? 'notification-item-unread' : 'notification-item-read'; var markReadBtn = (item.is_read === 0) ? '<button class="mark-read-btn" onclick="markAsRead(' + item.id + ', this)">Mark as read</button>' : ''; html += '<div class="notification-item ' + unreadClass + '" data-id="' + item.id + '"><div class="notification-title">CCS Admin | ' + item.date + '</div><div class="notification-content">' + escapeHtml(item.content) + '</div>' + markReadBtn + '</div>'; } list.innerHTML = html; }).catch(() => {}); }
-    function escapeHtml(text) { var div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
-    function markAsRead(announcementId, buttonElement) { fetch('/student/notifications/mark_read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ announcement_id: announcementId }) }).then(r => r.json()).then(data => { if (data.success) { var notifItem = buttonElement.closest('.notification-item'); if (notifItem) { notifItem.classList.remove('notification-item-unread'); notifItem.classList.add('notification-item-read'); buttonElement.remove(); } updateUnreadCount(); } }); }
-    function updateUnreadCount() { fetch('/student/notifications/unread_count').then(r => r.json()).then(data => { var badge = document.getElementById('notif-badge'); if (badge) badge.style.display = data.unread_count > 0 ? 'inline' : 'none'; }); }
-    setInterval(() => { if (!notifOpen) updateUnreadCount(); }, 30000); updateUnreadCount();
-    function initDarkMode() { const isDark = localStorage.getItem('darkMode') === 'true'; if (isDark) document.body.classList.add('dark-mode'); const toggle = document.getElementById('darkModeToggle'); if (toggle) toggle.addEventListener('click', (e) => { e.preventDefault(); document.body.classList.toggle('dark-mode'); localStorage.setItem('darkMode', document.body.classList.contains('dark-mode')); }); }
+    function toggleNotif(e) {
+      e.preventDefault();
+      var dropdown = document.getElementById('notif-dropdown');
+      notifOpen = !notifOpen;
+      dropdown.style.display = notifOpen ? 'block' : 'none';
+      if (notifOpen) loadNotifications();
+    }
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.has-dropdown-right')) {
+        var dropdown = document.getElementById('notif-dropdown');
+        if (dropdown) dropdown.style.display = 'none';
+        notifOpen = false;
+      }
+    });
+    function loadNotifications() {
+      fetch('/student/notifications')
+        .then(response => response.json())
+        .then(data => {
+          var list = document.getElementById('notif-list');
+          var badge = document.getElementById('notif-badge');
+          if (!list) return;
+          if (data.length === 0) {
+            list.innerHTML = '<li style="padding:10px 16px;"><span style="font-size:12px;color:rgba(255,255,255,0.5);">No announcements yet.</span></li>';
+            if (badge) badge.style.display = 'none';
+            return;
+          }
+          var html = '';
+          for (var i = 0; i < data.length; i++) {
+            var item = data[i];
+            html += '<div class="notification-item" data-id="' + item.id + '">' +
+              '<div class="notification-title">CCS Administration | ' + item.date + '</div>' +
+              '<div class="notification-content">' + escapeHtml(item.content) + '</div></div>';
+          }
+          list.innerHTML = html;
+        })
+        .catch(function() {
+          var list = document.getElementById('notif-list');
+          if (list) list.innerHTML = '<li style="padding:10px 16px;"><span style="font-size:12px;color:rgba(255,255,255,0.5);">Error loading notifications.</span></li>';
+        });
+    }
+    function escapeHtml(text) {
+      var div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    function updateUnreadCount() {
+      fetch('/student/notifications/unread_count')
+        .then(response => response.json())
+        .then(data => {
+          var badge = document.getElementById('notif-badge');
+          if (badge) {
+            if (data.unread_count > 0) { badge.style.display = 'inline'; badge.textContent = data.unread_count; }
+            else { badge.style.display = 'none'; }
+          }
+        }).catch(function(){});
+    }
+    setInterval(function() { if (!notifOpen) updateUnreadCount(); }, 30000);
+    updateUnreadCount();
+
+    function initDarkMode() {
+      const isDark = localStorage.getItem('darkMode') === 'true';
+      if (isDark) document.body.classList.add('dark-mode');
+      const toggle = document.getElementById('darkModeToggle');
+      if (toggle) {
+        toggle.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.body.classList.toggle('dark-mode');
+          localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        });
+      }
+    }
     initDarkMode();
+
+    document.getElementById('convertPointsBtn').addEventListener('click', function() {
+      fetch('/student/convert_points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'points=100'
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('convertMsg').innerHTML = '<span style="color:#ff6b6b;">' + data.error + '</span>';
+        } else {
+          document.getElementById('convertMsg').innerHTML = '<span style="color:#5DCAA5;">✅ Converted! You gained ' + data.sessions_gained + ' session(s).</span>';
+          setTimeout(() => location.reload(), 2000);
+        }
+      })
+      .catch(function() {
+        document.getElementById('convertMsg').innerHTML = '<span style="color:#ff6b6b;">Error converting points.</span>';
+      });
+    });
   </script>
 </body>
 </html>

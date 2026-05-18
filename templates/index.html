@@ -1,224 +1,323 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CCS | Home</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CCS Sit-in Monitoring System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .leaderboard-section {
+      max-width: 1200px;
+      margin: 50px auto;
+      padding: 20px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      display: none;
+    }
+    .leaderboard-title {
+      text-align: center;
+      color: #a0b4ff;
+      margin-bottom: 30px;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    .leaderboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .leaderboard-card {
+      background: linear-gradient(135deg, rgba(26,42,122,0.8), rgba(42,26,90,0.8));
+      border-radius: 16px;
+      padding: 20px;
+      transition: transform 0.3s, box-shadow 0.3s;
+      border: 1px solid rgba(100,140,255,0.3);
+    }
+    .leaderboard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(74,108,247,0.3);
+    }
+    .rank-badge {
+      font-size: 24px;
+      font-weight: bold;
+      color: #f0c040;
+    }
+    .student-name {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 10px 0 5px;
+    }
+    .student-course {
+      font-size: 13px;
+      color: #aaa;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+    .stat-value {
+      font-size: 22px;
+      font-weight: bold;
+      color: #a0b4ff;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: #ccc;
+    }
+    .btn-leaderboard {
+      background: linear-gradient(135deg, #4a6cf7, #7c3aed);
+      border: none;
+      color: white;
+      padding: 7px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      display: inline-block;
+    }
+    .btn-leaderboard:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .nav-links li a {
+      display: inline-block;
+      text-decoration: none;
+    }
+    .nav-login {
+      border: 1px solid rgba(255,255,255,0.25) !important;
+    }
+    .nav-register {
+      background: linear-gradient(135deg, #4a6cf7, #7c3aed) !important;
+      color: white !important;
+      font-weight: 600;
+    }
+    .nav-register:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    /* ── CENTERING FIX ── */
+    .auth-page {
+      display: flex;
+      justify-content: center;
+    }
+    #page-login .auth-card,
+    #page-register .auth-card {
+      margin: 0 auto;
+    }
+    /* ── LEADERBOARD PAGE WRAPPER ── */
+    #page-leaderboard {
+      min-height: calc(100vh - 57px);
+      background-image: url('/static/ucbuildings.png');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      position: relative;
+      display: none;
+    }
+    #page-leaderboard::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: rgba(5,10,40,0.82);
+      z-index: 0;
+      pointer-events: none;
+    }
+    #page-leaderboard .leaderboard-section {
+      position: relative;
+      z-index: 1;
+      display: block;
+    }
+  </style>
 </head>
 <body>
+  <nav class="navbar">
+    <div class="nav-brand">
+      <img src="{{ url_for('static', filename='uclogo.png') }}" alt="UC Logo" class="nav-logo">
+      <span>University of Cebu - Main Campus</span>
+      <div class="nav-divider"></div>
+      <img src="{{ url_for('static', filename='ccsmainlogo.png') }}" alt="CCS Logo" class="nav-logo">
+      <span>College of Computer Studies</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#" onclick="showPage('home')" class="active">Home</a></li>
+      <li><a href="#" onclick="showPage('login')" class="nav-login">Login</a></li>
+      <li><a href="#" onclick="showPage('register')" class="nav-register">Register</a></li>
+      <li><a href="#" onclick="showLeaderboard()" class="btn-leaderboard">🏆 Leaderboard</a></li>
+    </ul>
+  </nav>
 
   <!-- HOME PAGE -->
-  <div id="page-home" style="{% if show_page %}display:none{% else %}display:block{% endif %}">
-    <nav class="navbar">
-      <div class="nav-brand">
-        <img src="{{ url_for('static', filename='uclogo.png') }}" alt="UC" class="nav-logo" />
-        <div class="nav-divider"></div>
-        <img src="{{ url_for('static', filename='ccsmainlogo.png') }}" alt="CCS" class="nav-logo" />
-        <span>College of Computer Studies Sit-in Monitoring System</span>
+  <div id="page-home" class="hero">
+    <div class="hero-particles" id="particles"></div>
+    <div class="hero-content animate-fadein">
+      <div class="hero-logos">
+        <img src="{{ url_for('static', filename='uclogo.png') }}" alt="UC Logo" class="hero-logo">
+        <div class="hero-logo-divider"></div>
+        <img src="{{ url_for('static', filename='ccsmainlogo.png') }}" alt="CCS Logo" class="hero-logo">
       </div>
-      <ul class="nav-links">
-        <li><a href="#" class="active" onclick="showPage('home')">Home</a></li>
-        <li class="has-dropdown">
-          <a href="#">Community ▾</a>
-          <ul class="dropdown-menu">
-            <li><a href="#">Announcements</a></li>
-            <li><a href="#">Events</a></li>
-          </ul>
-        </li>
-        <li><a href="#">About</a></li>
-        <li><a href="#" onclick="showPage('login')" class="nav-login">Login</a></li>
-        <li><a href="#" onclick="showPage('register')" class="nav-register">Register</a></li>
-      </ul>
-    </nav>
+      <h1>College of Computer Studies</h1>
+      <h2 id="typed-text"></h2>
+      <p>Manage sit-in sessions, reservations, and lab usage efficiently.</p>
+    </div>
+  </div>
 
-    <div class="hero">
-      <div class="hero-particles">
-        <div class="particle" style="left:5%;animation-duration:8s;animation-delay:0s;"></div>
-        <div class="particle" style="left:15%;animation-duration:12s;animation-delay:2s;"></div>
-        <div class="particle" style="left:25%;animation-duration:9s;animation-delay:4s;"></div>
-        <div class="particle" style="left:40%;animation-duration:11s;animation-delay:1s;"></div>
-        <div class="particle" style="left:55%;animation-duration:7s;animation-delay:3s;"></div>
-        <div class="particle" style="left:70%;animation-duration:10s;animation-delay:5s;"></div>
-        <div class="particle" style="left:85%;animation-duration:13s;animation-delay:0.5s;"></div>
-        <div class="particle" style="left:95%;animation-duration:9s;animation-delay:2.5s;"></div>
-      </div>
-      <div class="hero-content">
-        <div class="hero-logos">
-          <img src="{{ url_for('static', filename='uclogo.png') }}" alt="UC Logo" class="hero-logo" />
-          <div class="hero-logo-divider"></div>
-          <img src="{{ url_for('static', filename='ccsmainlogo.png') }}" alt="CCS Logo" class="hero-logo" />
-        </div>
-        <h1 class="animate-fadein">University of Cebu</h1>
-        <h2 class="animate-fadein delay-1">College of Computer Studies</h2>
-        <p class="animate-fadein delay-2">
-          <span id="typed-text"></span>
-        </p>
+  <!-- LEADERBOARD PAGE -->
+  <div id="page-leaderboard">
+    <div class="leaderboard-section">
+      <div class="leaderboard-title">🏆 Top Students Leaderboard</div>
+      <div id="leaderboardContainer" class="leaderboard-grid">
+        <div style="text-align:center; color:#aaa;">Loading leaderboard...</div>
       </div>
     </div>
   </div>
 
   <!-- LOGIN PAGE -->
-  <div id="page-login" style="{% if show_page == 'login' %}display:block{% else %}display:none{% endif %}">
-    <nav class="navbar">
-      <div class="nav-brand">
-        <img src="{{ url_for('static', filename='uclogo.png') }}" alt="UC" class="nav-logo" />
-        <div class="nav-divider"></div>
-        <img src="{{ url_for('static', filename='ccsmainlogo.png') }}" alt="CCS" class="nav-logo" />
-        <span>College of Computer Studies Sit-in Monitoring System</span>
+  <div id="page-login" class="auth-page" style="display: none;">
+    <div class="auth-card">
+      <div class="auth-logos">
+        <img src="{{ url_for('static', filename='uclogo.png') }}" alt="UC Logo" class="auth-logo">
+        <div class="auth-logo-divider"></div>
+        <img src="{{ url_for('static', filename='ccsmainlogo.png') }}" alt="CCS Logo" class="auth-logo">
       </div>
-      <ul class="nav-links">
-        <li><a href="#" onclick="showPage('home')">Home</a></li>
-        <li class="has-dropdown">
-          <a href="#">Community ▾</a>
-          <ul class="dropdown-menu">
-            <li><a href="#">Announcements</a></li>
-            <li><a href="#">Events</a></li>
-          </ul>
-        </li>
-        <li><a href="#">About</a></li>
-        <li><a href="#" class="active nav-login">Login</a></li>
-        <li><a href="#" onclick="showPage('register')" class="nav-register">Register</a></li>
-      </ul>
-    </nav>
-    <div class="auth-page">
-      <div class="auth-card">
-        <div class="auth-logos">
-          <img src="{{ url_for('static', filename='uclogo.png') }}" alt="UC Logo" class="auth-logo" />
-          <div class="auth-logo-divider"></div>
-          <img src="{{ url_for('static', filename='ccsmainlogo.png') }}" alt="CCS Logo" class="auth-logo" />
-        </div>
-        <div class="auth-title">
-          <h1>University of Cebu</h1>
-          <p>College of Computer Studies</p>
-        </div>
-
-        {% if login_error %}
-        <p class="error-msg">{{ login_error }}</p>
-        {% endif %}
-
-        {% if register_success %}
-        <p class="success-msg">✓ Account created! You can now log in.</p>
-        {% endif %}
-
-        <form action="/login" method="POST">
-          <div class="form-group">
-            <label>ID Number</label>
-            <input type="text" name="login_id" placeholder="Enter your ID number" required />
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <input type="password" name="password" placeholder="Enter your password" required />
-          </div>
-          <button type="submit" class="btn-auth">Login</button>
-        </form>
-        <p class="switch-link">Don't have an account? <a href="#" onclick="showPage('register')">Register here</a></p>
-        <p class="footer-text">© 2026 University of Cebu - CCS. All rights reserved.</p>
+      <div class="auth-title">
+        <h1>Login to Your Account</h1>
+        <p>Access your sit-in monitoring dashboard</p>
       </div>
+      {% if login_error %}
+      <div class="error-msg">{{ login_error }}</div>
+      {% endif %}
+      {% if register_success %}
+      <div class="success-msg">Registration successful! Please login.</div>
+      {% endif %}
+      <form method="POST" action="/login">
+        <div class="form-group"><label>ID Number</label><input type="text" name="login_id" placeholder="Enter your ID number" required></div>
+        <div class="form-group"><label>Password</label><input type="password" name="password" placeholder="Enter your password" required></div>
+        <button type="submit" class="btn-auth">Login</button>
+      </form>
+      <div class="switch-link">Don't have an account? <a href="#" onclick="showPage('register')">Register here</a></div>
+      <div class="footer-text">© 2025 College of Computer Studies - University of Cebu</div>
     </div>
   </div>
 
   <!-- REGISTER PAGE -->
-  <div id="page-register" style="{% if show_page == 'register' %}display:block{% else %}display:none{% endif %}">
-    <nav class="navbar">
-      <div class="nav-brand">
-        <img src="{{ url_for('static', filename='uclogo.png') }}" alt="UC" class="nav-logo" />
-        <div class="nav-divider"></div>
-        <img src="{{ url_for('static', filename='ccsmainlogo.png') }}" alt="CCS" class="nav-logo" />
-        <span>College of Computer Studies Sit-in Monitoring System</span>
+  <div id="page-register" class="auth-page" style="display: none;">
+    <div class="auth-card">
+      <div class="auth-logos">
+        <img src="{{ url_for('static', filename='uclogo.png') }}" alt="UC Logo" class="auth-logo">
+        <div class="auth-logo-divider"></div>
+        <img src="{{ url_for('static', filename='ccsmainlogo.png') }}" alt="CCS Logo" class="auth-logo">
       </div>
-      <ul class="nav-links">
-        <li><a href="#" onclick="showPage('home')">Home</a></li>
-        <li class="has-dropdown">
-          <a href="#">Community ▾</a>
-          <ul class="dropdown-menu">
-            <li><a href="#">Announcements</a></li>
-            <li><a href="#">Events</a></li>
-          </ul>
-        </li>
-        <li><a href="#">About</a></li>
-        <li><a href="#" onclick="showPage('login')" class="nav-login">Login</a></li>
-        <li><a href="#" class="active nav-register">Register</a></li>
-      </ul>
-    </nav>
-    <div class="auth-page">
-      <div class="auth-card">
-        <div class="auth-logos">
-          <img src="{{ url_for('static', filename='uclogo.png') }}" alt="UC Logo" class="auth-logo" />
-          <div class="auth-logo-divider"></div>
-          <img src="{{ url_for('static', filename='ccsmainlogo.png') }}" alt="CCS Logo" class="auth-logo" />
-        </div>
-        <div class="auth-title">
-          <h1>University of Cebu</h1>
-          <p>College of Computer Studies</p>
-        </div>
-        <h2 class="form-title">Sign Up</h2>
-
-        {% if register_error %}
-        <p class="error-msg">{{ register_error }}</p>
-        {% endif %}
-
-        <form action="/register" method="POST">
-          <div class="form-group">
-            <label>ID Number</label>
-            <input type="text" name="id_number" placeholder="Enter your ID number" required />
-          </div>
-          <div class="form-group">
-            <label>Last Name</label>
-            <input type="text" name="lastname" placeholder="Enter your last name" required />
-          </div>
-          <div class="form-group">
-            <label>First Name</label>
-            <input type="text" name="firstname" placeholder="Enter your first name" required />
-          </div>
-          <div class="form-group">
-            <label>Middle Name <span style="font-weight:normal;color:#6b7db3;">(optional)</span></label>
-            <input type="text" name="middlename" placeholder="Enter your middle name" />
-          </div>
-          <div class="form-group">
-            <label>Course</label>
-            <select name="course" required>
-              <option value="">-- Select Course --</option>
-              <option value="BSIT">BSIT</option>
-              <option value="BSCS">BSCS</option>
-              <option value="BSEMC">BSEMC</option>
-              <option value="ACT">ACT</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Year Level</label>
-            <select name="course_level" required>
-              <option value="">-- Select Year Level --</option>
-              <option value="1">1st Year</option>
-              <option value="2">2nd Year</option>
-              <option value="3">3rd Year</option>
-              <option value="4">4th Year</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" name="email" placeholder="Enter your email" required />
-          </div>
-          <div class="form-group">
-            <label>Address</label>
-            <input type="text" name="address" placeholder="Enter your address" required />
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <input type="password" name="password" placeholder="At least 8 characters" required />
-          </div>
-          <div class="form-group">
-            <label>Repeat Password</label>
-            <input type="password" name="confirm" placeholder="Repeat your password" required />
-          </div>
-          <button type="submit" class="btn-auth">Register</button>
-        </form>
-        <p class="switch-link">Already have an account? <a href="#" onclick="showPage('login')">Login here</a></p>
-        <p class="footer-text">© 2026 University of Cebu - CCS. All rights reserved.</p>
+      <div class="auth-title">
+        <h1>Create New Account</h1>
+        <p>Register to start using the sit-in system</p>
       </div>
+      {% if register_error %}
+      <div class="error-msg">{{ register_error }}</div>
+      {% endif %}
+      <form method="POST" action="/register">
+        <div class="form-group"><label>ID Number</label><input type="text" name="id_number" placeholder="Enter your ID number" required></div>
+        <div class="form-group"><label>Last Name</label><input type="text" name="lastname" placeholder="Enter your last name" required></div>
+        <div class="form-group"><label>First Name</label><input type="text" name="firstname" placeholder="Enter your first name" required></div>
+        <div class="form-group"><label>Middle Name <span style="font-weight:normal;">(optional)</span></label><input type="text" name="middlename" placeholder="Enter your middle name"></div>
+        <div class="form-group"><label>Course</label><select name="course" required><option value="">-- Select Course --</option><option value="BSIT">BSIT</option><option value="BSCS">BSCS</option><option value="BSEMC">BSEMC</option><option value="ACT">ACT</option></select></div>
+        <div class="form-group"><label>Year Level</label><select name="course_level" required><option value="">-- Select Year Level --</option><option value="1">1st Year</option><option value="2">2nd Year</option><option value="3">3rd Year</option><option value="4">4th Year</option></select></div>
+        <div class="form-group"><label>Email</label><input type="email" name="email" placeholder="Enter your email" required></div>
+        <div class="form-group"><label>Address</label><input type="text" name="address" placeholder="Enter your address" required></div>
+        <div class="form-group"><label>Password</label><input type="password" name="password" placeholder="Create a password (min. 8 characters)" required></div>
+        <div class="form-group"><label>Confirm Password</label><input type="password" name="confirm" placeholder="Confirm your password" required></div>
+        <button type="submit" class="btn-auth">Register</button>
+      </form>
+      <div class="switch-link">Already have an account? <a href="#" onclick="showPage('login')">Login here</a></div>
+      <div class="footer-text">© 2025 College of Computer Studies - University of Cebu</div>
     </div>
   </div>
 
   <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <script>
+    function showLeaderboard() {
+      document.getElementById('page-home').style.display       = 'none';
+      document.getElementById('page-login').style.display      = 'none';
+      document.getElementById('page-register').style.display   = 'none';
+      document.getElementById('page-leaderboard').style.display = 'block';
+      window.scrollTo(0, 0);
+      fetchLeaderboard();
+    }
+
+    function fetchLeaderboard() {
+      fetch('/api/leaderboard')
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById('leaderboardContainer');
+          if (data.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#aaa; grid-column:1/-1;">No data yet. Complete sit-in sessions to earn points!</div>';
+            return;
+          }
+          let html = '';
+          data.forEach(student => {
+            const medals = ['🥇','🥈','🥉'];
+            const medal = medals[student.rank - 1] || `#${student.rank}`;
+            html += `
+              <div class="leaderboard-card">
+                <div class="rank-badge">${medal}</div>
+                <div class="student-name">${student.firstname} ${student.lastname}</div>
+                <div class="student-course">${student.course}</div>
+                <div class="stats">
+                  <div class="stat">
+                    <div class="stat-value">${student.total_sessions}</div>
+                    <div class="stat-label">Sessions</div>
+                  </div>
+                  <div class="stat">
+                    <div class="stat-value">${student.points}</div>
+                    <div class="stat-label">Points</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+          container.innerHTML = html;
+        })
+        .catch(err => console.error(err));
+    }
+
+    function createParticles() {
+      const container = document.getElementById('particles');
+      if (!container) return;
+      for (let i = 0; i < 80; i++) {
+        const particle = document.createElement('div');
+        particle.classList.add('particle');
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.animationDuration = Math.random() * 10 + 5 + 's';
+        particle.style.animationDelay = Math.random() * 10 + 's';
+        particle.style.width = particle.style.height = Math.random() * 3 + 1 + 'px';
+        container.appendChild(particle);
+      }
+    }
+
+    window.addEventListener('load', function() {
+      createParticles();
+      {% if login_error %}
+        showPage('login');
+      {% elif register_error or register_success %}
+        showPage('register');
+      {% else %}
+        showPage('home');
+      {% endif %}
+    });
+  </script>
 </body>
 </html>

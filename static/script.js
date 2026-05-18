@@ -1,14 +1,21 @@
 // ─── PAGE NAVIGATION ───────────────────────────────────────────────
 function showPage(page) {
-  document.getElementById('page-home').style.display     = 'none';
-  document.getElementById('page-login').style.display    = 'none';
-  document.getElementById('page-register').style.display = 'none';
-  document.getElementById('page-' + page).style.display  = 'block';
-  window.scrollTo(0, 0);
+  document.getElementById('page-home').style.display        = 'none';
+  document.getElementById('page-login').style.display       = 'none';
+  document.getElementById('page-register').style.display    = 'none';
+  const lb = document.getElementById('page-leaderboard');
+  if (lb) lb.style.display = 'none';
 
   if (page === 'home') {
+    document.getElementById('page-home').style.display = 'flex';
     setTimeout(startTyping, 100);
+  } else if (page === 'login' || page === 'register') {
+    document.getElementById('page-' + page).style.display = 'flex';
+  } else {
+    document.getElementById('page-' + page).style.display = 'block';
   }
+
+  window.scrollTo(0, 0);
 }
 
 // ─── TYPING ANIMATION ──────────────────────────────────────────────
@@ -36,6 +43,7 @@ function startTyping() {
 window.onload = function() {
   setTimeout(startTyping, 100);
 };
+
 // Dark mode toggle (global)
 function initGlobalDarkMode() {
   const isDark = localStorage.getItem('darkMode') === 'true';

@@ -204,10 +204,13 @@
               <select name="lab" id="labSelect" required>
                 <option value="">-- Choose Lab --</option>
                 <option value="Lab 517">Lab 517</option>
-                <option value="Lab 518">Lab 518</option>
-                <option value="Lab 519">Lab 519</option>
                 <option value="Lab 524">Lab 524</option>
                 <option value="Lab 526">Lab 526</option>
+                <option value="Lab 528">Lab 528</option>
+                <option value="Lab 530">Lab 530</option>
+                <option value="Lab 540">Lab 540</option>
+                <option value="Lab 542">Lab 542</option>
+                <option value="Lab 544">Lab 544</option>
               </select>
             </div>
 
@@ -272,20 +275,20 @@
           </thead>
           <tbody>
             {% for r in reservations %}
-            <tr>
-              <td>{{ r.lab }}</td>
-              <td>{{ r.purpose }}</td>
-              <td>{{ r.date }}</td>
-              <td>{{ r.start_time or '—' }} - {{ r.end_time or '—' }}</td>
-              <td>{{ r.pc_number or '—' }}</td>
+            <td>
+              <td>{{ r.lab }}<\/td>
+              <td>{{ r.purpose }}<\/td>
+              <td>{{ r.date }}<\/td>
+              <td>{{ r.start_time or '—' }} - {{ r.end_time or '—' }}<\/td>
+              <td>{{ r.pc_number or '—' }}<\/td>
               <td>
                 {% if r.status == 'Pending' %}<span class="status-pending">Pending</span>
                 {% elif r.status == 'Approved' %}<span class="status-approved">Approved</span>
                 {% else %}<span class="status-rejected">Rejected</span>{% endif %}
-               </td>
+                <\/td>
             </tr>
             {% else %}
-              <tr><td colspan="6" style="text-align:center;color:#aaa;">No reservations yet.</td></tr>
+              <tr><td colspan="6" style="text-align:center;color:#aaa;">No reservations yet.<\/td><\/tr>
             {% endfor %}
           </tbody>
         </table>
@@ -337,7 +340,6 @@
     const formContainer = document.getElementById('reservationFormContainer');
     const toggleBtn = document.getElementById('toggleReservationBtn');
 
-    // Disable/enable reservation toggle (persistent)
     let reservationsEnabled = localStorage.getItem('reservationsEnabled') !== 'false';
     function setFormEnabled(enabled) {
       if (enabled) {

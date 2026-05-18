@@ -64,7 +64,19 @@
         <div class="card-header">💾 Add Software</div>
         <div class="card-body">
           <form action="/admin/software/add" method="POST">
-            <div class="form-group"><label>Lab</label><select name="lab" required><option value="">-- Select Lab --</option><option>Lab 517</option><option>Lab 518</option><option>Lab 519</option><option>Lab 524</option><option>Lab 526</option></select></div>
+            <div class="form-group"><label>Lab</label>
+              <select name="lab" required>
+                <option value="">-- Select Lab --</option>
+                <option>Lab 517</option>
+                <option>Lab 524</option>
+                <option>Lab 526</option>
+                <option>Lab 528</option>
+                <option>Lab 530</option>
+                <option>Lab 540</option>
+                <option>Lab 542</option>
+                <option>Lab 544</option>
+              </select>
+            </div>
             <div class="form-group"><label>Software Name</label><input type="text" name="name" placeholder="e.g. Visual Studio Code" required></div>
             <div class="form-group"><label>Description</label><input type="text" name="description" placeholder="e.g. Code editor"></div>
             <button type="submit" class="btn-blue">Add Software</button>
